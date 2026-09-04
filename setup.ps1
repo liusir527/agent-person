@@ -55,7 +55,10 @@ param(
     [switch]$DryRun
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
+# PS 7.3+ 默认会将 native stderr 转为 ErrorRecord（EAP=Stop 时终止）
+# 显式阻止此行为，我们只靠 $LASTEXITCODE 判断原生命令成败
+$PSNativeCommandUseErrorActionPreference = $false
 $reportItems = New-Object System.Collections.ArrayList
 
 function Add-Report {
@@ -103,10 +106,22 @@ if ($DryRun) {
 } else {
     try {
         Push-Location $RepoRoot
-        $substat = git submodule status 2>&1 | Out-String
+        $substat = git submodule status 2>$null | Out-String
         if ($substat -match '^-') {
-            git submodule update --init --recursive 2>&1 | Out-Null
-            Add-Report "submodule init" "PASS" "git submodule update --init --recursive"
+            # file:// URLs require protocol.file.allow=always
+            $subUrl = git config --file .gitmodules --get submodule..dsh-memory.url 2>$null
+            if ($subUrl -match '^file://') {
+                $null = git -c protocol.file.allow=always submodule update --init --recursive 2>$null
+            } else {
+                $null = git submodule update --init --recursive 2>$null
+            }
+            $updateOk = $LASTEXITCODE -eq 0
+            if ($updateOk) {
+                Add-Report "submodule init" "PASS" "git submodule update --init --recursive"
+            } else {
+                $err = git submodule status 2>&1 | Out-String
+                Add-Report "submodule init" "FAIL" "update failed: $(if ($err) { $err.Trim() } else { 'unknown' })"
+            }
         } else {
             Add-Report "submodule init" "PASS" "already ready: $($substat.Trim())"
         }
@@ -152,12 +167,18 @@ if ($SkipInstall) {
     Add-Report "python deps" "DRYRUN" "will run: python -m pip install jieba pyyaml"
 } else {
     try {
-        $null = python -m pip install jieba pyyaml 2>&1
-        $pipOk = $LASTEXITCODE -eq 0
-        if ($pipOk) {
-            Add-Report "python deps" "PASS" "jieba/pyyaml ready"
+        # 幂等检测：先验证 import，失败才安装
+        $test = & python -c "import jieba, yaml; print('ok')" 2>&1
+        if ($LASTEXITCODE -eq 0 -and $test -match 'ok') {
+            Add-Report "python deps" "PASS" "jieba/pyyaml already available"
         } else {
-            Add-Report "python deps" "WARN" "pip install exit code = $LASTEXITCODE"
+            $null = & python -m pip install jieba pyyaml 2>&1
+            $test2 = & python -c "import jieba, yaml; print('ok')" 2>&1
+            if ($LASTEXITCODE -eq 0 -and $test2 -match 'ok') {
+                Add-Report "python deps" "PASS" "jieba/pyyaml installed"
+            } else {
+                Add-Report "python deps" "WARN" "pip install failed to install jieba/pyyaml"
+            }
         }
     } catch {
         Add-Report "python deps" "WARN" "$($_.Exception.Message)"
