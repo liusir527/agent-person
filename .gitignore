@@ -1,0 +1,11 @@
+# 主仓 .gitignore
+# 系统文件
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
+
+# 临时文件
+*.tmp
+*.log

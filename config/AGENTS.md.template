@@ -1,0 +1,15 @@
+# 记忆库使用规则（dsh-memory）
+
+- 知识库根：`{{MEMORY_DIR}}`（Git 仓库，md 为唯一真源，SQLite 索引可随时重建）
+- 当用户描述错误、报障或提问时，先检索历史经验再作答：
+  用 `mcp__memory__memory_search` 查询（query/tag/severity/project/limit），
+  命中则参考其"根因/解决方案"；需要细节时调 `mcp__memory__memory_read`（id）。
+- 完成一次有复用价值的排障/踩坑后，调用 `mcp__memory__memory_save`
+  沉淀经验（完整 Markdown，含 `---frontmatter---`；必填 id/tags/severity/
+  category/occurrence/status/created_at/updated_at，正文须有 `## 现象`
+  与 `## 解决方案` 章节，模板见 `{{MEMORY_DIR}}/knowledge/experiences/` 示例）。
+- 保存后索引自动更新（重复经验会合并计数，无需手动处理）。
+- 若 `mcp__memory__*` 工具不可用（如未注册 MCP 服务器），可退化为直接
+  用 read/write 工具读写 `{{MEMORY_DIR}}/knowledge/experiences/*.md`。
+- 本文件由 agent-person 安装脚本生成（模板：config/AGENTS.md.template），
+  如需定制请改模板后重跑 setup.ps1。

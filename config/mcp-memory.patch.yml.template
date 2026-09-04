@@ -1,0 +1,12 @@
+# dsh-memory MCP 服务器注册片段 —— 由 setup.ps1 插入 cordis.patch.yml
+# 占位符由安装脚本替换：{{PYTHON_EXE}} / {{MEMORY_DIR}} / {{SERVER_NAME}}
+- insert:
+    - id: mcp-memory
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        transport: stdio
+        serverName: {{SERVER_NAME}}
+        command: '{{PYTHON_EXE}}'
+        args:
+          - '{{MEMORY_DIR}}/scripts/mcp_memory.py'
+        cwd: '{{MEMORY_DIR}}'
