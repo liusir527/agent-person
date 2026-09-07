@@ -23,7 +23,7 @@ packages/nf-bug-progress/
 ## 启用 / 更新
 
 1. 安装到 web profile（已执行过，重装后按需再跑）：
-   `dsh plugin --profile web add link:REDACTED_WORKSPACE_PATH/packages/nf-bug-progress`
+   `dsh plugin --profile web add link:$(git rev-parse --show-toplevel)/packages/nf-bug-progress`
 2. 把插件写进启动 patch：`start.bat` / `.dsh/tmp/restart_dsh.bat` /
    `.dsh/.cordis.patch.generated.yml` 都已含
    `- id: nf-bug-progress, name: '@nsfocus/nf-bug-progress'`。

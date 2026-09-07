@@ -1,0 +1,66 @@
+# 设备调试
+
+在任何真实设备、SSH、k3s、Web UI、串口、screen 或 GDB 操作前使用本阶段。
+
+## 访问方式判断
+
+1. 用户已经提供地址、端口、用户名和密码时，直接使用这些信息。
+2. 否则**优先读取 `<workspace_root>/.dsh/env_config/deploy_build/device_config.json`**（`workspace_root` 由 deploy-build 脚本的 `_resolve_workspace_root()` 解析：`AGENT_ASSETS_DIR` 环境变量 → git 根 → cwd 兜底；登记了实际设备参数，如 10.66.23.115:30022，勿用手写默认端口）。
+3. 仍缺省时再使用下列兜底默认，并提示用户核对：
+   - SSH 端口：`50022`（兜底，按 device_config 覆盖）
+   - 密码：`+f0TRVX#F6`
+   - 未说明时认为一次一密未开启
+3. 如果开启一次一密，先获取设备 hash：
+   - 有串口时优先通过串口获取
+   - 串口不可用时，再使用 Playwright CLI 模式从 Web UI 获取
+4. 将运行设备分支与当前源码分支确认清楚，再把运行态信息映射到代码。
+
+## 操作留痕（强制：一律走 screen）
+
+对设备的一切 CLI 命令操作（只读查询、vppctl、shell、k3s 交互、GDB 等）**必须**在 screen 会话内执行，
+使用户可实时旁观：
+
+- 会话统一命名 `nf_<设备IP或别名>`（GDB 为 `nf_<设备>-gdb`）；先 `screen -ls` 检查，**用户先建的会话必须
+  复用**（Attached 用 `-x`、Detached 用 `-r`），会话名不符约定或候选多个时询问用户用哪个，无会话才
+  `screen -dmS nf_<会话名> bash` 创建；
+- 命令经 `screen -S <会话名> -X stuff 'cmd\n'` 注入（读回用 `hardcopy` + `cat`），或挂载到共享屏幕
+  （`screen -r`，Attached 时 `screen -x`）后执行；
+- **开始操作前必须在对话中告知用户**：会话名 + 查看方式（`ssh` 登录设备后 `screen -x nf_<会话名>`）；
+- 标准流程见 [ssh-tools](../../ssh-tools/SKILL.md) 的「NF 设备操作标准」，旁路纪律见
+  [screen使用经验](../../../references/screen使用经验.md)。
+
+## GDB Attach
+
+1. 检查是否已有 GDB attach。
+2. 已 attach 时，需要的话用 `screen` 加 `reptyr` 将接口调整到 screen 内。
+3. 未 attach 时，在 `screen` 内启动 `gdb`。
+4. 记录进程名、PID、线程列表、二进制路径、符号信息和分支/构建标识。
+
+## 交互式 GDB 安全约束
+
+- GDB 命令必须逐条执行。
+- 解引用指针或嵌套结构前，先验证每一个前置地址依赖可访问。
+- 不要把依赖性解引用合并进同一个表达式，避免坏地址导致目标进程受扰动。
+- 转发相关或时序敏感 BUG，在检查可变状态前先判断是否需要锁调度器/线程。
+- 除非用户接受风险，不执行恢复运行、修改内存、大范围变更断点或调用目标函数的命令。
+
+## 运行态信息收集
+
+通过知识图谱或知识库查找模块相关 debug 命令，先执行只读命令。收集：
+
+- 服务/容器状态
+- 相关日志
+- 模块计数器或 debug 输出
+- 转发、会话、表项状态
+- 崩溃、backtrace、core 信息
+- 复现所需配置片段
+
+## 输出
+
+每条真实设备命令都记录：
+
+- 命令
+- 目标
+- 执行原因
+- 输出摘要
+- 是否改变状态

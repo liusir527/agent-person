@@ -45,7 +45,7 @@ packages/nf-terminal-monitor/
 ## 启用 / 更新
 
 1. 安装到 web profile（已执行过，重装后按需再跑）：
-   `dsh plugin --profile web add link:REDACTED_WORKSPACE_PATH/packages/nf-terminal-monitor`
+   `dsh plugin --profile web add link:$(git rev-parse --show-toplevel)/packages/nf-terminal-monitor`
 2. 把插件写进启动 patch：`start.bat` / `.dsh/tmp/restart_dsh.bat` /
    `.dsh/.cordis.patch.generated.yml` 都已含 `- id: nf-terminal-monitor, name: '@nsfocus/nf-terminal-monitor'`。
 3. 重启 dsh web（关窗重开 / 跑 start.bat / 跑 restart_dsh.bat）。

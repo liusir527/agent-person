@@ -1,0 +1,201 @@
+---
+name: bug-fix-workflow
+description: 串接网络安全设备项目的端到端 BUG 修复工作流。适用于用户需要分析 BUG 单或原始问题描述、熟悉陌生代码库、读取知识库、获取设备调试接口、执行 SSH/k3s/GDB 诊断、制定修复计划、编码修复、影响范围评估、自测验证、沉淀可复用解题思路等场景。触发词包括 BUG分析、修BUG、BUG修复流程、设备调试、GDB调试、问题定位、影响范围评估、自测验证、抽取解题思路。
+---
+
+# BUG 修复工作流
+
+将本 skill 作为串接式调试工作流的总调度器。保持当前上下文精简：按阶段加载对应 reference，必要时调用更窄的 skill 或工具，并在进入下一阶段前记录关键判断。
+
+
+
+## 环境前置检查（开工前必跑，缺一不可）
+
+本 skill 依赖以下资源/插件，**开工前**先用下面命令确认全部到位；缺失任意一项都应暂停并提示用户：
+
+| 类别 | 资源 | 存在判定 | 缺失时的降级路径 |
+|------|------|---------|------------------|
+| 状态机引擎 | `state_machine.py` | `[ -f "$(git rev-parse --show-toplevel)/skills/bug-fix-workflow/state_machine.py" ]` | **阻塞**——状态机门禁硬校验是闭环铁律，无脚本则整套流程不可执行 |
+| 铁律文档 | `hooks/AGENT.md`（仓库根） | `[ -f hooks/AGENT.md ]` | **阻塞**——开工动线（先 init 后动作、先审查后编码、闭环沉淀等 9 条铁律）出自该文档 |
+| 阶段 reference | `references/{task-boundary,project-intake,environment-setup,bug-analysis,device-debugging,fix-and-verify,reasoning-extraction}.md` | `[ -d references ] && ls references/*.md \| wc -l -eq 7` | **阻塞**——每阶段开工前必读对应 reference（见下方「阶段路由」节） |
+| 兄弟 skill | `analysis-reviewer`（agent 定义在 `agents/analysis-reviewer/analysis-reviewer.md`）、`memory-gen`、`memory-push` | `[ -f ../../agents/analysis-reviewer/analysis-reviewer.md ] && [ -d ../memory-gen ] && [ -d ../memory-push ]` | 阻断对应阶段：缺 `analysis-reviewer` → 「审查结论」阶段停摆（不阻断 init 但阻断 advance 到编码）；缺 `memory-gen`/`memory-push` → 闭环收尾无法沉淀，停用 close 门禁的强制校验 |
+| 会话标题插件 | `nf-bug-title`（由 DSH 插件系统加载） | 收到含 BUG 单号提示词后观察会话标题是否自动改为「修复 <单号>」 | 软告警——会话标题未变化时提示用户重启 DSH 启动脚本（`start.bat`，位置见 `~/.dsh/` 安装根）重新加载插件；本 skill 仍可继续 |
+| 可选增强 | `.codegraph/` 索引（仓库根） | `[ -d .codegraph ]` | 自动降级——缺失时回退到本地 grep/glob/Read（见「工具串接规则」节第 2 条） |
+
+**统一自检命令**（任一为 FAIL 即按上表降级）：
+
+```bash
+WS="$(git rev-parse --show-toplevel)" && cd "$WS" && \
+  test -f "$WS/skills/bug-fix-workflow/state_machine.py" && echo "SM:OK" || echo "SM:FAIL"; \
+  test -f hooks/AGENT.md && echo "HOOK:OK" || echo "HOOK:FAIL"; \
+  ls references/*.md 2>/dev/null \| wc -l \| awk '{print ($1==7?"REF:OK":"REF:FAIL(" $1 "/7)")}'
+```
+
+> 自检命令以 `cd "$WS"` 锚定仓库根，**从任何子目录运行都能给出正确结论**；若 `git rev-parse` 失败（脚本被复制到非 git 目录），`WS` 为空且 `cd` 会拒绝执行，后续检测全部 FAIL，请先回到仓库根。
+
+> **路径说明（DSH 最佳实践）**：铁律文档位于仓库根 `hooks/AGENT.md`（由 DSH 启动时自动注入会话上下文），不在 `.dsh/hooks/` 下；命令路径用 `git rev-parse --show-toplevel` 锚定仓库根，跨机/跨仓无需修改。
+
+## 环境配置参数
+
+优先读取 env_config 配置文件（`<workspace_root>/.dsh/env_config/deploy_build/deploy_config.json`（编译机）与 `device_config.json`（设备）；`workspace_root` 由 deploy-build / certificate-apply / vpp-api-sync 各脚本顶部的 `_resolve_workspace_root()` 解析：`AGENT_ASSETS_DIR` 环境变量 → git 根 → cwd 兜底）；缺省时不猜默认，必要时向用户询问：
+
+编译机参数: [地址] [端口] [用户名] [密码] [ npp仓库地址 ]
+
+测试设备参数: [地址] [端口] [用户名] [密码]
+
+## 阶段路由
+
+> **会话命名（自动动作，收到提示词后）**：用户提示词含 BUG 单号（如 `NEWNF-54398`）即视为激活
+> BUG 修复流程，工作流自动把**当前会话标题**改为「修复 <单号>」——由 `nf-bug-title` 插件完成：
+> 监听 `session/event`（user/message）提取单号，调用官方 `SessionTitleService.rename`
+> （user 来源锁定标题，LLM 自动标题不再覆盖）。该动作自动生效，agent **无需、也不允许**手动
+> 声称已改名；若会话标题未变化（插件未加载/未重启），提示用户重启 `start.bat` 后再验证。
+
+0. **开工必读**：先读取 `references/task-boundary.md`（任务边界与防扩散约束），确认本次只改哪个仓库/工作区、问题属于哪一层（WEB/AGENT/VPP）、取证与停止条件。违反边界即为扩散，开工即回退。
+1. 进入新仓库、新分支、新产品线或陌生模块时，先读取 `references/project-intake.md`。
+2. 拿到 BUG 单准备开工、需要在隔离工作区（git worktree）修复时，先读取 `references/environment-setup.md`（git pull → 派生 fix-XX 分支与工作区 → worktree 内 `codegraph init` 建索引 → 开放 dirs.json 读写权限）。
+3. 用户提供 BUG ID、BUG 单文本、崩溃现象、转发问题、日志或原始问题描述时，读取 `references/bug-analysis.md`。
+4. 接触真实设备、SSH、k3s 容器、screen 会话、GDB、串口、一次一密或 Web UI 前，读取 `references/device-debugging.md`。
+5. 已知可能根因或代码区域后，读取 `references/fix-and-verify.md`。
+6. 修复或排查结论稳定后，读取 `references/reasoning-extraction.md`。
+7. **闭环收尾必做沉淀**：`更新BUG单` 阶段必须推进到微观状态「沉淀经验」才可 `close`（状态机门禁强制校验）——调用 `memory-gen` 生成经验文档到 `<workspace_root>/.dsh-memory/knowledge/experiences/sparse/`（v2 知识库真实位置）并更新索引，再调用 `memory-push` 推送 git。经验抽取内容与强制/可选边界见 `references/reasoning-extraction.md`。
+
+## 工具串接规则
+
+- **分层判断优先**：本项目为 WEB → AGENT → VPP（npp）三层。转发/选路/运行态问题先确认 VPP 侧是否已有数据或逻辑（vppctl/CLI/show 命令），缺字段才考虑 biapi 上报链路；显示类问题先从设备上 VPP 运行态取证，不从 WEB 源码倒推。涉及 `*.api` 改动编译后走 `vpp-api-sync` 暂存 api.json，且上机验证**退化为冒烟验证**（仅 npp 启动 + 基础命令可用）；配置类验证走**人机协作**（agent 先出测试方案.md，用户按方案配置，agent 再检查）——细则见 references/task-boundary.md §2。
+- 仓库根目录存在 `.codegraph/` 时，理解架构、定位符号、分析影响面前优先使用 CodeGraph；不存在时使用快速本地搜索和常规文件读取。
+- 项目存在知识库时，优先使用知识工具获取全貌，再进行大范围人工探索，尤其是 LightRAG、GitNexus、Confluence 等内容。
+- 用户提供 JIRA 问题编号或明确要求读取/更新公司 BUG 单时，使用 JIRA/Confluence 工具。
+- 真实设备命令优先使用 SSH、k3s、container 等专用 skill。不要自行拼凑密码处理、文件传输或容器进入流程。
+- Web UI 获取设备信息或浏览器驱动的设备流程，使用 Playwright CLI 相关模式。
+- 区分发现、诊断、变更和验证。不要把会改变设备状态的动作藏在只读诊断步骤里。
+
+## BUG 分析五步法（防止浅分析，每条 BUG 必过）
+
+> 教训来源：NEWNF-54398 只找到字段 `sla_mange.activate_intf` 就下结论，没追它的产生与消费全链。
+> 实际选取逻辑分两层：**产生方** `pbr_sla.c pbr_sla_update_intf_status` 决定 activate_intf 内容
+> （SLA 首选不在配置出接口列表时，回退选第一个非 admin_proto_down 端口）；
+> **消费方** `pbr_forward.c pbr_itf_attach_stack` 按 activate_intf 成员过滤 fib_paths。
+> 我错把产生方逻辑归到消费方，方案被推翻返工——浅分析自食其果。
+
+1. **画数据流，再下结论**：`谁产生 → 谁消费 → 怎么消费 → 空/边界怎么办`。字段只是结果，逻辑才是真相；找不到产生方或消费方 = 没理解问题。**数据流必须写进分析产物**，不能只在脑中过一遍。
+2. **参考方案只作线索，不作答案**：换分支/版本必须重新验证参考逻辑在本分支是否成立。有参考 ≠ 有答案。
+3. **强制自我证伪**：结论后主动列出"这个假设在哪些场景不成立"。列不出来 = 没理解透，不许进编码。**证伪清单写进分析产物**，供审查核验。
+4. **必须追到边界态**：至少三类——①数据为空/被释放（如 SLA 全 down）②首选不在候选列表 ③来源异常（fwd 表项查不到）。给每个边界态明确期望行为，例（SD-WAN 选路）：存活+首选在列表→选首选；存活+首选不在→回退第一个有效端口；全 down+成员一致→丢弃；全 down+成员不一致→选第一个非 SLA 成员有效端口。**每个边界态必须转成自测/上机验证用例**，不留"编译过=对"的盲区。
+5. **推进前提**：小改动也走全门禁——对抗审查 + 用户确认一关不能跳（见「状态机驱动」）。
+
+> 记忆口诀：**字段 ≠ 逻辑，参考 ≠ 答案，证伪才敢下结论，边界才叫理解，门禁一关不能跳。**
+
+## 必要检查点
+
+执行过程中输出这些检查点记录：
+
+- `上下文`：仓库、代码分支、产品/设备分支、当前假设。
+- `证据`：BUG 单事实、日志、代码路径、运行态信息、已执行命令。
+- `假设`：按优先级排列的可能原因，以及每个假设的验证/证伪方式。
+- `计划`：最小修复计划、影响范围、回退或安全注意事项。
+- `验证`：自测范围、设备/运行态验证、回归风险。
+- `沉淀`：可复用经验、命令模式、代码模式或知识库更新候选。
+
+## 状态机驱动（每条 BUG 单强制）
+
+每条 BUG 单的状态统一由引擎脚本 `state_machine.py` 管理（铁律见仓库根 `hooks/AGENT.md` 的 `BUG 修复流程铁律` 一节；本 skill 不再重复铁律，跨 skill 修改铁律请直接改 `hooks/AGENT.md`）。
+状态文件位于 `<项目根>/bug-fix-state/<BUG单号>/`，产物模板在 `templates/`。
+
+主状态机：`分析→审查结论→出修改方案→编码→上机验证→更新BUG单→结束`，每个主状态含微观状态机。
+
+**硬性规则：**
+- **起步**：拿到 BUG 单先 `init`（`python "$(git rev-parse --show-toplevel)"/skills/bug-fix-workflow/state_machine.py init --bug-id <单号> --title <摘要> --module <模块>`）。
+- **每完成一步**：`micro` / `advance` 推进状态，`record` 累计工时，`review` 登记审查轮次——先 `state` 看当前节点再动作。
+- **门禁硬校验**：`advance` 到下一主状态前，脚本强制校验前置产物与 gates；不满足会 exit 2 拒绝。**分析结论未经对抗审查（复现成功）不得进入编码。**
+- **小改动也走全门禁**：改动大小不决定要不要审，理解深度才决定；`analysis_reviewed`（对抗审查）与 `plan_confirmed`（用户确认）对任何规模的改动都硬性生效。
+- **人工确认门禁只能 confirm 置位**：`plan_confirmed`/`manual_verify_passed`/`pr_reviewed`/`jira_closed` 禁止 `gate` 手拍（脚本拦截），须 `confirm --flag <flag> --by <确认人>`；`analysis_reviewed` 只能由对抗审查 PASS 自动置位；`code_reviewed`/`build_passed` 置位须带 `--evidence <存在文件>`（审查记录/编译日志）。
+- **审查**：分析产物齐 → 调 `analysis-reviewer` 子 agent 对抗审查（按触发链路复现），其落盘 `审查结果-rN.md` 并调 `review` 命令记账。FAIL 且轮次<3 回「分析」，3 轮 FAIL 转人工接管。
+- **断点**：中断后用 `state` / `resolve` 定位当前节点并获取恢复指引。
+- **闭环必须沉淀**：修复+自测 → 上机验证 → 转人工验证 → PR（格式 `fix: NEWNF-XXXXX 【模块】描述`）→ 人工 review → 关闭工单 → **沉淀经验**（memory-gen 生成稀疏经验文档 + 更新索引，memory-push 推送 git）→ 输出 `XX问题-BUG-SEQ问题分析.md`（按 AGENT.md 约定放 npp 仓库根）→ `close`。**close 门禁强制校验微观状态已推进到「沉淀经验」**，跳过沉淀无法闭环。
+
+> 工时先记入 `state.json`（`record` 命令，`sync_mode=local`）；JIRA worklog 直写为后续扩展点（`sync_mode=jira_worklog`）。
+
+## 进度展示（长程任务可观测，防"不知道走到哪"）
+
+长程任务（编译/SSH/GDB/跨多轮）最容易让用户迷失在长日志里，进度必须"一眼可见"：
+
+- **progress.md 自动刷新**：状态机每次落盘自动刷新 `<项目根>/bug-fix-state/<BUG单号>/progress.md`（人类可读进度卡片：主状态流水线 + 微观状态 + 门禁 + 最近事件）。长任务中用户随时打开该文件即可看到当前阶段，无需解析 state.json。
+- **progress 命令**：`python "$(git rev-parse --show-toplevel)"/skills/bug-fix-workflow/state_machine.py progress --bug-id <单号>` 输出可视化进度总览；`state` / `resolve` / `gate-check` 也在开头输出同一总览（并补齐旧状态的 progress.md）。
+- **每次状态变更自动带横幅**：`micro` / `advance` / `review` / `confirm` / `gate` / `record` / `worktree-set` / `close` 等命令成功后都会追加一行 `【进度 x/7 · 主状态 · 微观状态】`，让运行日志每步自带当前位置。
+- **回复必须带阶段横幅**：BUG 修复任务的每轮回复开头输出一行阶段横幅，数值取自脚本 `【进度 x/7 · …】`：
+  ```
+  ▸ 阶段：3/7 出修改方案 · 用户确认
+  ```
+  多轮长任务中，每个自然段（切换取证/设备/代码等动作）之间至少输出一次当前阶段；禁止让用户盯着长日志猜进度。
+- **用户问"走到哪了"**：先 `progress --bug-id <单号>` 刷新总览，再以横幅 + 总览回复。
+
+## 需要反向提问的情况
+
+只有缺失信息会阻塞安全推进时才向用户提问。典型阻塞包括：
+
+- 没有 BUG 单文本，也没有可复现现象。
+- 缺少设备地址、凭据、串口访问方式或一次一密/hash 获取路径，并且不能安全推断。
+- 某个真实设备命令可能改变转发行为、重启服务、attach 到时序敏感进程或暴露敏感信息。
+- 当前代码分支与运行设备分支不匹配，并且该差异会影响诊断。
+
+## 外部状态变更确认规范（防歧义提问，教训：NEWNF-54251 误流转 JIRA）
+
+> 教训来源：问用户"工单如何关闭"时把「AI 代为流转关闭」标成 Recommended 且包裹在"方案选项"里，
+> 用户实际意图是"我自己关闭"。结果 agent 直接执行 NEW→RESOLVED 流转，用户不满——选项措辞歧义 + 代为执行被默认推荐。
+
+**铁律：涉及外部系统状态变更（JIRA 流转/评论、git push/强推、设备部署/重启、配置下发）的选项，必须遵守：**
+
+1. **「谁操作」与「怎么操作」分开问**。第一问只问归属：状态变更由谁执行（选项：A. 您自己执行 B. AI 代为执行 C. 转他人/测试）。不问"如何关闭"，只问"谁来关"。归属明确后再做对应动作，不再把动作方案写成选项。
+2. **代为执行选项绝不默认 Recommended**。默认推荐永远是「最小干预」：不主动改动外部状态、由用户/测试人自行操作、agent 只记录与置位本地门禁。用户明确说"你帮我做"（含"代为/帮我/你来"等授权词）才可代为执行。
+3. **执行前回显精确动作**。任何外部写操作执行前，先输出一行「即将执行：`<精确命令/动作>`（影响：…；可逆性：…）」并等用户本轮回显确认；已获用户明确授权词的动作仍要回显一次再执行（不额外等确认）。禁止把执行动作藏进选项描述里默认通过。
+4. **措辞禁用歧义代词**。选项标签与描述中「我」必须指代明确：AI 侧一律写「AI 代为…」，用户侧写「您自行…」，杜绝"我代为关闭"这类用户可能读成自己操作的标签。
+5. **状态变更可逆性提示**。凡是会产生 changelog/留痕、强推覆盖、重启服务的动作，选项描述必须带「不可逆/可回退=xxx」；用户预期里没有这个动作 = 不得执行。
+6. **本地门禁 ≠ 外部状态**。`confirm --flag jira_closed` 只能登记"工单已被用户/他人在 JIRA 上关闭"这一事实，agent 不得自行流转工单状态；若要代为流转，必须先走第 2/3 条。`transition_done` 等 jira 标志同理，只记事实不代操作。
+
+### 提问模板（复制即用，防歧义）
+
+**模板一：外部状态变更归属确认（第一问，只问谁操作）**
+
+```json
+{
+  "questions": [
+    {
+      "id": "confirm_owner",
+      "header": "请确认操作归属",
+      "question": "【现状】<工单/设备/分支当前状态，一段话。>\n【AI 将不做任何外部状态变更，仅记录门禁】\n请确认：该状态变更由谁执行？",
+      "options": [
+        {"label": "您自行操作 (Recommended，最小干预)", "description": "AI 不动外部状态、不流转/不评论/不部署；AI 仅记录本地门禁并等您完成后确认。可回退：无任何外部动作。"},
+        {"label": "AI 代为执行", "description": "AI 将执行 <精确动作列表，如工单流转至 RESOLVED>（影响：…；可逆性：…）；执行前还会再回显一次精确命令。仅在您确实需要 AI 代做时选择。"},
+        {"label": "转测试/他人", "description": "交由测试或他人执行；AI 记录转交事实，不自行操作。"}
+      ]
+    }
+  ]
+}
+```
+
+**模板二：最小干预已默认、仅确认事实（不触发任何外部动作）**
+
+```json
+{
+  "questions": [
+    {
+      "id": "confirm_fact",
+      "header": "请确认已完成",
+      "question": "请确认以下事实（AI 不执行任何外部操作，仅登记）：\n- <事实1：工单已在 JIRA 关闭 / PR 已合入 / 设备已验证>",
+      "options": [
+        {"label": "确认，事实成立 (Recommended)", "description": "AI 登记门禁后继续下一步。"},
+        {"label": "还需要调整", "description": "您说明具体调整项，AI 按指示修改（不擅自扩大范围）。"}
+      ]
+    }
+  ]
+}
+```
+
+## 安全默认值
+
+- 未明确说明前，将真实设备视为类生产环境。
+- 修改状态前优先执行只读命令。
+- 涉及 GDB 时，逐条执行命令，并在解引用前验证每个前置指针/地址依赖可访问。
+- 对转发相关或时序敏感问题，交互式调试前先判断是否需要锁调度器/线程。
+- 代码修改保持与周边风格一致，避免无关重构，始终保持最小改动。

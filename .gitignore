@@ -9,3 +9,49 @@ Thumbs.db
 # 临时文件
 *.tmp
 *.log
+
+# === 凭证与运行时配置（不入库） ===
+# 以下目录/文件包含 SSH 密码、设备凭证、Cookie 等敏感信息，
+# 一旦提交到公开仓库会造成凭证泄露。规则必须与各 skill 的写入路径对齐。
+
+# 1) skill 凭证主目录：deploy-build / certificate-apply / vpp-api-sync 三处都会写
+#    （AGENT_ASSETS_DIR 或当前 git 根下的 .dsh/env_config/<skill>/）
+#    注：当前 .dsh/ 是子模块占位目录未展开，所以行 22 的 **/env_config/ 兜底
+#    才真正生效；本条是子模块展开后的精确匹配。
+.dsh/env_config/
+
+# 2) 通配兜底：即便 env_config 被放到仓库其他位置，也强制忽略
+**/env_config/
+
+# 3) deploy-build 写入的具体凭证文件（兜底，万一不在 .dsh/ 下）
+**/deploy_config.json
+**/device_config.json
+
+# 4) certificate-apply 写入的 Cookie 临时文件
+**/.cookies.tmp
+
+# 5) 通用的环境变量/凭证文件
+.env
+.env.*
+**/.env
+**/*.credentials
+**/credentials.json
+
+# 6) SSH 密钥与证书
+**/id_rsa
+**/id_rsa.pub
+**/*.pem
+**/*.key
+
+# 7) deploy-build 日志文件（运行产物，可能含敏感信息）
+deploy.log
+**/deploy.log
+
+# === 自检 ===
+# 修改本文件后，请运行 `git check-ignore -v <待写入文件>` 验证规则生效：
+#   git check-ignore -v .dsh/env_config/deploy_build/deploy_config.json
+# 期望输出：.gitignore:行号:模式  路径
+# 无输出 = 规则未命中 = 凭证会被 git 跟踪，必须立即修复。
+
+
+runtime/*
