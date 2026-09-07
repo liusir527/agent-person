@@ -1,0 +1,24 @@
+{
+  "name": "@nsfocus/nf-bug-progress",
+  "version": "0.1.0",
+  "description": "NF BUG 修复工作流进度面板：在 Web GUI 对话页面上动态呈现状态机进度（主状态/微观状态/门禁），后端读取 bug-fix-state/*/state.json 并通过 /api/nf-bug-progress/* 服务给前端轮询。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "files": [
+    "lib",
+    "client.js",
+    "README.md"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@nsfocus/nf-gdb-guard",
+  "version": "0.1.0",
+  "description": "GDB 危险命令防护插件：在 tools/pre-execute 拦截 Bash/pwsh 中的 gdb 危险命令（continue/run/jump/kill/quit/call 等），替代未接线的 gdb-tools block-gdb-dangerous hook",
+  "main": "src/index.ts",
+  "dependencies": {
+    "cordis": "^4.0.0"
+  }
+}

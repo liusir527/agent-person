@@ -1,0 +1,120 @@
+network_topology:
+  name: Firewall_Test_Topology
+  description: 包含SSL VPN、仪表口、GRE over IPsec隧道及TONE/SDWAN测试节点的防火墙测试拓扑
+
+  # 设备节点定义
+  nodes:
+    - id: sslvpn_client
+      type: host
+      name: Sslvpn客户端
+      icon: pc
+
+    - id: meter_client
+      type: host
+      name: 仪表口客户端
+      icon: pc
+
+    - id: sw1
+      type: switch
+      name: Sw1
+      ports: 2
+
+    - id: dut1
+      type: firewall
+      name: 防火墙DUT1
+      ports: 6
+
+    - id: sw2
+      type: switch
+      name: Sw2
+      ports: 2
+
+    - id: sw3
+      type: switch
+      name: Sw3
+      ports: 2
+
+    - id: sw4
+      type: switch
+      name: Sw4
+      ports: 2
+
+    - id: sw5
+      type: switch
+      name: Sw5
+      ports: 4
+
+    - id: dut2
+      type: firewall
+      name: 防火墙DUT2
+      ports: 2
+
+    - id: meter_server
+      type: host
+      name: 仪表口服务端
+      icon: pc
+
+    - id: sw_1066
+      type: switch
+      name: 10.66交换机
+      ports: 3
+
+    - id: tone
+      type: host
+      name: TONE
+      icon: pc
+
+    - id: sdwan
+      type: host
+      name: SDWAN
+      icon: pc
+
+  # 链路连接定义
+  links:
+    - endpoints: ["sslvpn_client", "sw1"]
+      description: SSLVPN客户端到接入交换机
+
+    - endpoints: ["meter_client", "sw1"]
+      description: 仪表口客户端到接入交换机
+
+    - endpoints: ["sw1", "dut1"]
+      description: 接入交换机到防火墙DUT1
+
+    - endpoints: ["dut1", "sw2"]
+      description: DUT1到上联交换机Sw2
+
+    - endpoints: ["dut1", "sw3"]
+      description: DUT1到上联交换机Sw3
+
+    - endpoints: ["dut1", "sw4"]
+      description: DUT1到上联交换机Sw4
+
+    - endpoints: ["dut1", "sw_1066"]
+      description: DUT1到10.66测试交换机
+
+    - endpoints: ["sw2", "sw5"]
+      description: Sw2到核心交换机Sw5
+
+    - endpoints: ["sw3", "sw5"]
+      description: Sw3到核心交换机Sw5
+
+    - endpoints: ["sw4", "sw5"]
+      description: Sw4到核心交换机Sw5
+
+    - endpoints: ["sw5", "dut2"]
+      description: 核心交换机Sw5到防火墙DUT2
+
+    - endpoints: ["dut2", "meter_server"]
+      description: DUT2到仪表口服务端
+
+    - endpoints: ["sw_1066", "tone"]
+      description: 10.66交换机到TONE测试主机
+
+    - endpoints: ["sw_1066", "sdwan"]
+      description: 10.66交换机到SDWAN测试主机
+
+    # GRE over IPsec隧道（逻辑链路）
+    - endpoints: ["dut1", "dut2"]
+      type: logical
+      protocol: Gre over ipsec
+      description: 防火墙之间的GRE over IPsec隧道

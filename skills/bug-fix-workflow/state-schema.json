@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "bug-fix-state/state.json 权威 schema",
+  "description": "NF BUG 修复状态机单条 BUG 单的状态文件。脚本 state_machine.py 按此结构读写。字段说明见各 property 注释。",
+  "type": "object",
+  "required": [
+    "schema_version", "bug_id", "jira_key", "title", "module",
+    "created_at", "updated_at",
+    "main_state", "micro_state", "review_round",
+    "escalated", "human_takeover",
+    "artifacts", "gates", "timeline", "review_rounds", "worklog", "jira", "git"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1, "description": "schema 版本，迁移时递增" },
+    "bug_id": { "type": "string", "description": "BUG 单号，目录名（如 NEWNF-51805）" },
+    "jira_key": { "type": "string", "description": "JIRA 工单号，默认等于 bug_id" },
+    "title": { "type": "string", "description": "BUG 描述摘要" },
+    "module": { "type": "string", "description": "【模块】标签，如 安全策略" },
+    "created_at": { "type": "string", "format": "date-time", "description": "状态机创建时间（ISO8601 本地时区）" },
+    "updated_at": { "type": "string", "format": "date-time", "description": "最近一次变更时间" },
+
+    "main_state": { "type": "string", "enum": ["分析", "审查结论", "出修改方案", "编码", "上机验证", "更新BUG单", "结束"], "description": "主状态机当前节点" },
+    "micro_state": { "type": "string", "description": "主状态内部当前微观状态" },
+    "review_round": { "type": "integer", "minimum": 0, "description": "已完成的审查轮次（0..3）" },
+    "escalated": { "type": "boolean", "description": "审查 3 轮失败已升级" },
+    "human_takeover": { "type": "boolean", "description": "已转人工接管" },
+
+    "artifacts": {
+      "type": "object",
+      "description": "产物路径映射。analysis/plan/selftest 门禁按已知产物文件名查磁盘（见 ARTIFACT_FILES 常量）；conclusion 存 close 时 --conclusion 传入的路径（可能为 bug 目录之外绝对路径）",
+      "properties": {
+        "analysis": { "type": "string" },
+        "review": { "type": "string", "description": "最新一轮审查结果文件名" },
+        "reviews": { "type": "array", "items": { "type": "string" }, "description": "全部轮次审查结果文件名" },
+        "plan": { "type": "string" },
+        "selftest": { "type": "string" },
+        "pr_desc": { "type": "string" },
+        "conclusion": { "type": "string" }
+      }
+    },
+
+    "gates": {
+      "type": "object",
+      "description": "门禁布尔表。advance 到下一主状态前硬校验对应项为 true。人工确认门禁（plan_confirmed/manual_verify_passed/pr_reviewed/jira_closed）仅可由 confirm 命令置位；analysis_reviewed 仅由 review PASS 置位；code_reviewed/build_passed 置位须带证据文件，全部由 state_machine.py 强制执行",
+      "properties": {
+        "analysis_reviewed": { "type": "boolean" },
+        "plan_confirmed": { "type": "boolean" },
+        "worktree_ready": { "type": "boolean", "description": "编译机隔离 worktree 已派生并登记（仅 worktree-set 置位）" },
+        "code_reviewed": { "type": "boolean" },
+        "build_passed": { "type": "boolean" },
+        "selftest_done": { "type": "boolean" },
+        "basic_test_done": { "type": "boolean" },
+        "manual_verify_handed": { "type": "boolean" },
+        "manual_verify_passed": { "type": "boolean" },
+        "pr_reviewed": { "type": "boolean" },
+        "jira_closed": { "type": "boolean" }
+      }
+    },
+
+    "timeline": {
+      "type": "array",
+      "description": "事件流（断点恢复依据）",
+      "items": {
+        "type": "object",
+        "required": ["at", "event", "main_state", "micro_state"],
+        "properties": {
+          "at": { "type": "string", "format": "date-time" },
+          "event": { "type": "string" },
+          "main_state": { "type": "string" },
+          "micro_state": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "review_rounds": {
+      "type": "array",
+      "description": "每轮审查记录",
+      "items": {
+        "type": "object",
+        "required": ["round", "result", "reproduced", "issues", "artifact"],
+        "properties": {
+          "round": { "type": "integer" },
+          "started_at": { "type": "string" },
+          "ended_at": { "type": "string" },
+          "result": { "type": "string", "enum": ["PASS", "FAIL"] },
+          "reproduced": { "type": "boolean" },
+          "issues": { "type": "string", "description": "阻塞点/建议补充方向（FAIL 时）" },
+          "artifact": { "type": "string }
+        }
+      }
+    },
+
+    "worklog": {
+      "type": "object",
+      "description": "工时记录。sync_mode 为 JIRA worklog 直写扩展点：local → jira_worklog",
+      "properties": {
+        "sync_mode": { "type": "string", "enum": ["local", "jira_worklog"], "description": "当前工时同步方式" },
+        "local": {
+          "type": "object",
+          "properties": {
+            "analysis": { "type": "object", "properties": { "minutes": { "type": "integer" }, "note": { "type": "string" } } },
+            "review": { "type": "object", "properties": { "minutes": { "type": "integer" }, "note": { "type": "string" } } },
+            "plan": { "type": "object", "properties": { "minutes": { "type": "integer" }, "note": { "type": "string" } } },
+            "coding": { "type": "object", "properties": { "minutes": { "type": "integer" }, "note": { "type": "string" } } },
+            "device_verify": { "type": "object", "properties": { "minutes": { "type": "integer" }, "note": { "type": "string" } } },
+            "jira": { "type": "object", "properties": { "minutes": { "type": "integer" }, "note": { "type": "string" } } }
+          }
+        },
+        "total_minutes": { "type": "integer" },
+        "jira_worklog_synced": { "type": "boolean" }
+      }
+    },
+
+    "jira": {
+      "type": "object",
+      "description": "JIRA 同步标志（实际调用由主 agent 走 ask-atlassian，脚本只记账）",
+      "properties": {
+        "fetched": { "type": "boolean" },
+        "analysis_comment_added": { "type": "boolean" },
+        "conclusion_comment_added": { "type": "boolean" },
+        "transition_done": { "type": "boolean" },
+        "last_error": { "type": "string" }
+      }
+    },
+
+    "git": {
+      "type": "object",
+      "description": "git 提交与 PR 信息",
+      "properties": {
+        "branch": { "type": "string" },
+        "commit_sha": { "type": "string" },
+        "commit_format": { "type": "string" },
+        "pr_url": { "type": "string" }
+      }
+    }
+  }
+}

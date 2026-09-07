@@ -1,0 +1,24 @@
+{
+  "name": "@nsfocus/nf-brand",
+  "version": "0.1.0",
+  "description": "自定义品牌插件：以插槽优先级覆盖 dsh Web 面板的 DeepSeek logo 与品牌文字（sidebar + 会话 hero + 标签页标题/favicon）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "files": [
+    "lib",
+    "client.js",
+    "README.md"
+  ],
+  "license": "MIT"
+}

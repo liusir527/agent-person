@@ -1,0 +1,79 @@
+name: firewall_ha_cluster
+description: 防火墙双机高可用测试拓扑
+
+nodes:
+  - id: pc_client
+    name: 客户端
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    adapters: 1
+    left: 100
+    top: 100
+
+  - id: sw_downlink
+    name: 下联交换机
+    node_type: qemu
+    template: huawei-ce6800
+    image: ce6800.qcow2
+    ram: 4096
+    cpu_type: x86_64
+    adapters: 3
+    left: 300
+    top: 100
+
+  - id: fw_a
+    name: 主防火墙
+    node_type: qemu
+    template: NF605
+    image: manual-produce-41768-test-2021-2-6.qcow2
+    ram: 4096
+    adapters: 4
+    left: 500
+    top: 50
+
+  - id: fw_b
+    name: 备防火墙
+    node_type: qemu
+    template: NF605
+    image: manual-produce-41768-test-2021-2-6.qcow2
+    ram: 4096
+    adapters: 4
+    left: 500
+    top: 150
+
+  - id: sw_uplink
+    name: 上联交换机
+    node_type: qemu
+    template: huawei-ce6800
+    image: ce6800.qcow2
+    ram: 4096
+    cpu_type: x86_64
+    adapters: 3
+    left: 700
+    top: 100
+
+  - id: pc_server
+    name: 服务端
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    adapters: 1
+    left: 900
+    top: 100
+
+links:
+  - src: "pc_client:0/0"
+    dst: "sw_downlink:0/0"
+  - src: "sw_downlink:1/0"
+    dst: "fw_a:0/0"
+  - src: "sw_downlink:2/0"
+    dst: "fw_b:0/0"
+  - src: "fw_a:0/1"
+    dst: "sw_uplink:0/0"
+  - src: "fw_b:0/1"
+    dst: "sw_uplink:1/0"
+  - src: "sw_uplink:2/0"
+    dst: "pc_server:0/0"

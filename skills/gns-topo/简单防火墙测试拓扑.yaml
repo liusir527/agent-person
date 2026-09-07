@@ -1,0 +1,52 @@
+name: simple_firewall_test
+description: 防火墙基本连通性测试
+
+nodes:
+  - id: pc_client
+    name: 测试客户端
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    adapters: 1
+    left: 100
+    top: 200
+
+  - id: sw1
+    name: 接入交换机
+    node_type: qemu
+    template: huawei-ce6800
+    image: ce6800.qcow2
+    ram: 4096
+    cpu_type: x86_64
+    adapters: 2
+    left: 300
+    top: 200
+
+  - id: firewall
+    name: 防火墙 DUT
+    node_type: qemu
+    template: NF605
+    image: manual-produce-41768-test-2021-2-6.qcow2
+    ram: 4096
+    adapters: 4
+    left: 500
+    top: 200
+
+  - id: pc_server
+    name: 服务端
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    adapters: 1
+    left: 700
+    top: 200
+
+links:
+  - src: "pc_client:0/0"
+    dst: "sw1:0/0"
+  - src: "sw1:1/0"
+    dst: "firewall:0/0"
+  - src: "firewall:0/1"
+    dst: "pc_server:0/0"

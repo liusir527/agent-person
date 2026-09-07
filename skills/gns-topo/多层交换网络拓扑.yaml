@@ -1,0 +1,91 @@
+
+name: multi_layer_switching
+description: 三层交换网络实验
+
+nodes:
+  - id: pc1
+    name: PC1
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    adapters: 1
+    left: 50
+    top: 50
+
+  - id: pc2
+    name: PC2
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    adapters: 1
+    left: 50
+    top: 150
+
+  - id: sw_acc1
+    name: Access1
+    node_type: qemu
+    template: huawei-ce6800
+    image: ce6800.qcow2
+    ram: 4096
+    cpu_type: x86_64
+    adapters: 2
+    left: 250
+    top: 50
+
+  - id: sw_acc2
+    name: Access2
+    node_type: qemu
+    template: huawei-ce6800
+    image: ce6800.qcow2
+    ram: 4096
+    cpu_type: x86_64
+    adapters: 2
+    left: 250
+    top: 150
+
+  - id: sw_core
+    name: Core-SW
+    node_type: qemu
+    template: huawei-ce6800
+    image: ce6800.qcow2
+    ram: 4096
+    cpu_type: x86_64
+    adapters: 4
+    left: 450
+    top: 100
+
+  - id: firewall
+    name: 边界防火墙
+    node_type: qemu
+    template: NF605
+    image: manual-produce-41768-test-2021-2-6.qcow2
+    ram: 4096
+    adapters: 4
+    left: 650
+    top: 100
+
+  - id: cloud_wan
+    name: WAN-Cloud
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    adapters: 1
+    left: 850
+    top: 100
+
+links:
+  - src: "pc1:0/0"
+    dst: "sw_acc1:0/0"
+  - src: "pc2:0/0"
+    dst: "sw_acc2:0/0"
+  - src: "sw_acc1:1/0"
+    dst: "sw_core:0/0"
+  - src: "sw_acc2:1/0"
+    dst: "sw_core:1/0"
+  - src: "sw_core:2/0"
+    dst: "firewall:0/0"
+  - src: "firewall:0/1"
+    dst: "cloud_wan:0/0"

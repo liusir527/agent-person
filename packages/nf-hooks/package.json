@@ -1,0 +1,9 @@
+{
+  "name": "@nsfocus/nf-hooks",
+  "version": "0.1.0",
+  "description": "NF 工作区访问门控 Hook 插件 — restricted 模式强制 file_path 边界",
+  "main": "src/index.ts",
+  "dependencies": {
+    "cordis": "^4.0.0"
+  }
+}

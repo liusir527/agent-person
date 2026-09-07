@@ -1,0 +1,116 @@
+name: "HA_Topology"
+description: "EVE-NG Firewall HA Dual-node Topology - Inverted V layout"
+
+nodes:
+  - id: fw_a
+    name: FW-A
+    node_type: qemu
+    template: NF605
+    ram: 4096
+    cpu: 2
+    adapters: 6
+    icon: ":/symbols/firewall.svg"
+    left: 400
+    top: 200
+
+  - id: fw_b
+    name: FW-B
+    node_type: qemu
+    template: NF605
+    ram: 4096
+    cpu: 2
+    adapters: 6
+    icon: ":/symbols/firewall.svg"
+    left: 400
+    top: 450
+
+  - id: cloud_mgmt
+    name: cloud1
+    node_type: nat
+    network_type: pnet1
+    icon: ":/symbols/cloud.svg"
+    left: 100
+    top: 50
+
+  - id: sw_downlink
+    name: CE6800-Downlink
+    node_type: qemu
+    template: huawei-ce6800
+    ram: 4096
+    cpu: 2
+    adapters: 4
+    icon: ":/symbols/Switch.png"
+    left: 200
+    top: 300
+
+  - id: sw_uplink
+    name: CE6800-Uplink
+    node_type: qemu
+    template: huawei-ce6800
+    ram: 4096
+    cpu: 2
+    adapters: 4
+    icon: ":/symbols/Switch.png"
+    left: 600
+    top: 300
+
+  - id: pc_client
+    name: PC-Client
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    cpu: 1
+    icon: ":/symbols/Server.png"
+    left: 50
+    top: 300
+
+  - id: pc_server
+    name: PC-Server
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    cpu: 1
+    icon: ":/symbols/Server.png"
+    left: 750
+    top: 300
+
+links:
+  # Management Network - firewalls connect to cloud1 (pnet1 = host eth1)
+  - src: "fw_a:0/0"
+    dst: "cloud_mgmt:0"
+    description: "FW-A Management Port"
+
+  - src: "fw_b:0/0"
+    dst: "cloud_mgmt:0"
+    description: "FW-B Management Port"
+
+  # Business Traffic
+  - src: "fw_a:1/0"
+    dst: "fw_b:1/0"
+    description: "HA Link - IPsec VPN"
+
+  - src: "fw_a:2/0"
+    dst: "sw_downlink:0/0"
+    description: "FW-A to Downlink Switch"
+
+  - src: "fw_b:2/0"
+    dst: "sw_downlink:1/0"
+    description: "FW-B to Downlink Switch"
+
+  - src: "pc_client:0/0"
+    dst: "sw_downlink:2/0"
+    description: "PC-Client to Downlink Switch"
+
+  - src: "fw_a:3/0"
+    dst: "sw_uplink:0/0"
+    description: "FW-A to Uplink Switch"
+
+  - src: "fw_b:3/0"
+    dst: "sw_uplink:1/0"
+    description: "FW-B to Uplink Switch"
+
+  - src: "pc_server:0/0"
+    dst: "sw_uplink:2/0"
+    description: "PC-Server to Uplink Switch"

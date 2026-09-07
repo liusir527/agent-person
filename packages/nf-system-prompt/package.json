@@ -1,0 +1,9 @@
+{
+  "name": "@nsfocus/nf-system-prompt",
+  "version": "0.1.0",
+  "description": "NF 工作区 System Prompt 注入插件 — 注入代码修改规则、BUG修复流程约束等",
+  "main": "src/index.ts",
+  "dependencies": {
+    "cordis": "^4.0.0"
+  }
+}

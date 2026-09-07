@@ -1,0 +1,62 @@
+name: "Simple_Firewall_Test"
+description: "EVE-NG Simple firewall test topology - PC Client through switch to NF605 firewall"
+
+nodes:
+  - id: pc_client
+    name: PC-Client
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    cpu: 1
+    adapters: 1
+    icon: ":/symbols/Server.png"
+    left: 100
+    top: 300
+
+  - id: sw_access
+    name: CE6800-Switch
+    node_type: qemu
+    template: huawei-ce6800
+    ram: 4096
+    cpu: 2
+    adapters: 2
+    icon: ":/symbols/Switch.png"
+    left: 300
+    top: 300
+
+  - id: fw_main
+    name: FW-Main
+    node_type: qemu
+    template: NF605
+    ram: 4096
+    cpu: 2
+    adapters: 6
+    icon: ":/symbols/firewall.svg"
+    left: 500
+    top: 300
+
+  - id: pc_server
+    name: PC-Server
+    node_type: qemu
+    template: linux-ubuntu22.04
+    image: ubuntu-22-04.qcow2
+    ram: 1024
+    cpu: 1
+    adapters: 1
+    icon: ":/symbols/Server.png"
+    left: 700
+    top: 300
+
+links:
+  - src: "pc_client:0/0"
+    dst: "sw_access:0/0"
+    description: "PC-Client to Switch"
+
+  - src: "sw_access:1/0"
+    dst: "fw_main:1/0"
+    description: "Switch to Firewall"
+
+  - src: "fw_main:2/0"
+    dst: "pc_server:0/0"
+    description: "Firewall to PC-Server"
