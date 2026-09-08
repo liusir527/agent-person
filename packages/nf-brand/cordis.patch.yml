@@ -1,0 +1,7 @@
+# @nsfocus/nf-brand —— bundle 补丁层
+# 让 DSH web profile 把本包作为 cordis Loader entry 加载；
+# loader 触发时由 lib/index.js 的 apply() 注册宿主占位；
+# client 半体（client.js）由 dsh-client-modules 自动通过 exports["./client"] 派发。
+- insert:
+    - id: nf-brand
+      name: '@nsfocus/nf-brand'

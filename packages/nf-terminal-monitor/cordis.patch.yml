@@ -1,0 +1,7 @@
+# @nsfocus/nf-terminal-monitor —— bundle 补丁层
+# 让 DSH web profile 把本包作为 cordis Loader entry 加载；
+# apply() 通过 ctx.inject(['webServer']) 挂载 /api/nf-terminal-monitor/{list,summary,clear} 路由，
+# client 半体（client.js）由 dsh-client-modules 自动派发到浏览器侧 slots。
+- insert:
+    - id: nf-terminal-monitor
+      name: '@nsfocus/nf-terminal-monitor'
