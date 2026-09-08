@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+# scripts/mcp_memory.py — placeholder stdio MCP server for the memory system.
+#
+# Bootstrap installs this file to <user>/.dsh-memory/scripts/mcp_memory.py when
+# the real implementation (per doc/spec/设计方案.v2.md §8.1b, P4) is not yet
+# available. It exposes the MCP protocol surface so that DSH web's
+# mcp-memory plugin can start cleanly; every tool call returns a structured
+# "not implemented" response so callers can detect the stub state without
+# crashing.
+#
+# Once the real implementation lands, replace this file with the production
+# server; bootstrap will NOT overwrite an existing mcp_memory.py (idempotent).
+#
+# Stub is ASCII-only on purpose so PowerShell 5.1 + Windows ANSI transports
+# never corrupt it; the real implementation may contain UTF-8 freely.
+from __future__ import annotations
+
+import json
+import sys
+from typing import Any
+
+SERVER_INFO = {
+    "name": "dsh-memory",
+    "version": "0.0.0-stub",
+}
+
+STUB_NOTICE = (
+    "dsh-memory MCP server is running as a bootstrap stub. "
+    "The real implementation is pending per doc/spec/设计方案.v2.md §8.1b (P4). "
+    "Use ~/.dsh-memory/scripts/{search.py,tier_manager.py} directly in the meantime."
+)
+
+
+def _send(obj: dict[str, Any]) -> None:
+    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+
+
+def _err(id_: Any, code: int, message: str) -> dict[str, Any]:
+    return {"jsonrpc": "2.0", "id": id_, "error": {"code": code, "message": message}}
+
+
+def _result(id_: Any, **fields: Any) -> dict[str, Any]:
+    return {"jsonrpc": "2.0", "id": id_, "result": fields}
+
+
+def handle(req: dict[str, Any]) -> dict[str, Any] | None:
+    """Return a JSON-RPC response for one request, or None for notifications."""
+    method = req.get("method")
+    id_ = req.get("id")
+    if method == "initialize":
+        return _result(id_, protocolVersion="2024-11-05", serverInfo=SERVER_INFO, capabilities={"tools": {}})
+    if method == "tools/list":
+        return _result(
+            id_,
+            tools=[
+                {
+                    "name": "memory_search",
+                    "description": STUB_NOTICE,
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                        "required": ["query"],
+                    },
+                },
+                {
+                    "name": "memory_read",
+                    "description": STUB_NOTICE,
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {"id": {"type": "string"}},
+                        "required": ["id"],
+                    },
+                },
+                {
+                    "name": "memory_save",
+                    "description": STUB_NOTICE,
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {"text": {"type": "string"}, "tags": {"type": "array", "items": {"type": "string"}}},
+                        "required": ["text"],
+                    },
+                },
+            ],
+        )
+    if method == "tools/call":
+        params = req.get("params") or {}
+        name = params.get("name", "<unknown>")
+        return _result(
+            id_,
+            content=[{"type": "text", "text": f"[stub] {name}: {STUB_NOTICE}"}],
+            isError=False,
+        )
+    if method == "ping":
+        return _result(id_, pong=True)
+    if id_ is not None:
+        return _err(id_, -32601, f"method not implemented: {method}")
+    return None  # notification, no response
+
+
+def main() -> int:
+    for raw in sys.stdin:
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            req = json.loads(line)
+        except json.JSONDecodeError as e:
+            _send(_err(None, -32700, f"parse error: {e}"))
+            continue
+        resp = handle(req)
+        if resp is not None:
+            _send(resp)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
