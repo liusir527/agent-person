@@ -164,26 +164,41 @@ async function verifyPermissions(
 
 ### 环境配置模板
 
-```bash
-# .env.example（提交此文件）
-JIRA_URL=https://inone.intra.nsfocus.com/jira
-JIRA_AUTH_TYPE=pat
-CONFLUENCE_URL=https://inone.intra.nsfocus.com/confluence
-CONFLUENCE_AUTH_TYPE=pat
+把 token 写到工作区根的 `.env` 文件——DSH 的 `@nsfocus/nf-env-watcher` 插件会监听它的变化，**自动 hot-reload 到 dsh web 进程的 `process.env`**，无需重启。
 
-# PAT设置
-JIRA_PERSONAL_TOKEN=
-CONFLUENCE_PERSONAL_TOKEN=
+```bash
+# <workspace>/.env（gitignored，绝不提交）
+# 注意：这些不是 bootstrap-only 变量，可以放 .env 里。
+# 不要把 PATH / DSH_* / NODE_* / *_PROXY 等放进来——nf-env-watcher 会拒绝
+# 整个 reload 并日志告警（详见 .dsh/skills/.../SKILL.md "JIRA/Confluence 环境变量放哪里"）。
+JIRA_URL=https://inone.intra.nsfocus.com/jira
+JIRA_PERSONAL_TOKEN=粘贴你的 JIRA PAT
+CONFLUENCE_URL=https://inone.intra.nsfocus.com/confluence
+CONFLUENCE_PERSONAL_TOKEN=粘贴你的 Confluence PAT
+# 可选：项目/类型/字段过滤（你的工作流自定义）
+JIRA_DEFAULT_PROJECT=NEWNF
+JIRA_DEFAULT_ISSUETYPE=Bug
 ```
 
 ```bash
-# .gitignore
+# .gitignore（仓库根已有）
 .env
 .env.local
 .env.*.local
 credentials.json
 **/secrets/**
 ```
+
+**写入流程**：
+
+1. 第一次部署：用 `write` 工具创建 `<workspace>/.env`，把 token 贴进去
+2. dsh web 启动时 `@nsfocus/nf-env-watcher` 会读它并记日志 `event=start`，若文件存在还会触发 `event=initial-sync`
+3. 后续 token 轮换：编辑 `<workspace>/.env` → watcher 在 200ms 内重读 → 日志 `event=reload applied=[..., JIRA_PERSONAL_TOKEN, ...]` → dsh web 进程里新值立即生效
+4. 失败排查：看 `runtime/nf-env-watcher.log`（JSONL）；常见 fail 原因：
+   - 变量命中 bootstrap-only 黑名单（`DSH_*` / `PATH` 等）→ 整次 reload 拒绝
+   - `.env` 语法错误（行尾缺 `=`、引号不闭合等）→ `event=reject`
+   - `Out-File -Append` 增量写可能漏报——用 `write` 工具整文重写最稳
+
 
 ## 故障排除
 

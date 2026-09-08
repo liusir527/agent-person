@@ -125,6 +125,25 @@ uvx mcp-atlassian --help
 env | grep -E "(JIRA_|CONFLUENCE_)"
 ```
 
+### DSH 环境下用 `<cwd>/.env`
+
+如果 mcp-atlassian 作为 DSH 的 MCP server 跑（通过 `~/.dsh/profiles/web/cordis.patch.yml` 的 `mcp-atlassian` 段），token 不是从启动 shell 里 export，而是从**工作区根的 `.env`** 读取：
+
+```
+<workspace>/.env
+├── JIRA_URL=...
+├── JIRA_PERSONAL_TOKEN=...
+├── CONFLUENCE_URL=...
+└── CONFLUENCE_PERSONAL_TOKEN=...
+```
+
+`@nsfocus/nf-env-watcher` 监听 `.env` 变化并自动 hot-reload 到 dsh web 的 `process.env`，无需重启。token 轮换 = 编辑 `.env` → 等 200ms → 重启 mcp 子进程（如 mcp-atlassian 不会自动重启，则需要 `Stop-Process` 一次让 cordis 重建它）。
+
+详细约束（哪些变量不能进 .env、reload 失败的诊断）见：
+- SKILL.md → "JIRA/Confluence 环境变量放哪里"
+- `references/authentication-patterns.md` → "环境配置模板"
+
+
 ### 测试连接
 
 创建一个简单的测试脚本：
