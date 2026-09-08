@@ -1,0 +1,6 @@
+# @nsfocus/nf-hooks —— bundle 补丁层
+# 把本包作为 cordis Loader entry 加载；
+# apply() 注册 tools/pre-execute 拦截，限制 read/write/edit/pwsh/bash 等工具的 file_path 边界。
+- insert:
+    - id: nf-hooks
+      name: '@nsfocus/nf-hooks'

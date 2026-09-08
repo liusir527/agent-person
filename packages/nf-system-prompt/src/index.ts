@@ -4,8 +4,10 @@ export const name = 'nf-system-prompt'
 export const inject = ['systemPrompt']
 
 export function apply(ctx: Context) {
+  // ctx.systemPrompt 由 dsh-base 注入；TS 不知道该字段，用 any 旁路编译期类型检查
+  const sp = (ctx as any).systemPrompt as { section: (section: { name: string; order: number; text: string }) => void }
   // ── 1. 代码修改前四问（order -40，在 persona 之前） ──────────────
-  ctx.systemPrompt.section({
+  sp.section({
     name: 'nf-rules-four-questions',
     order: -40,
     text: [
@@ -23,7 +25,7 @@ export function apply(ctx: Context) {
   })
 
   // ── 2. BUG 修复流程约束（order -39） ────────────────────────────
-  ctx.systemPrompt.section({
+  sp.section({
     name: 'nf-bug-fix-rules',
     order: -39,
     text: [
@@ -41,7 +43,7 @@ export function apply(ctx: Context) {
   })
 
   // ── 3. NF 调试经验索引（order 50，在 persona 之后） ──────────────
-  ctx.systemPrompt.section({
+  sp.section({
     name: 'nf-debug-experience',
     order: 50,
     text: [

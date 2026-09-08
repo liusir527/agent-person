@@ -1,0 +1,6 @@
+# @nsfocus/nf-gdb-guard —— bundle 补丁层
+# 把本包作为 cordis Loader entry 加载；
+# apply() 注册 tools/pre-execute 拦截，对 Bash/pwsh 工具的 gdb 危险命令黑名单拒绝。
+- insert:
+    - id: nf-gdb-guard
+      name: '@nsfocus/nf-gdb-guard'

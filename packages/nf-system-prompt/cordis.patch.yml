@@ -1,0 +1,6 @@
+# @nsfocus/nf-system-prompt —— bundle 补丁层
+# 把本包作为 cordis Loader entry 加载；
+# apply() 通过 ctx.systemPrompt.section() 注入四问/修复流程/调试经验三段系统提示词。
+- insert:
+    - id: nf-system-prompt
+      name: '@nsfocus/nf-system-prompt'
