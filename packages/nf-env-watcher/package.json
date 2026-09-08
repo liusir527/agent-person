@@ -1,0 +1,40 @@
+{
+  "name": "@nsfocus/nf-env-watcher",
+  "version": "0.1.0",
+  "description": "Hot-reload <cwd>/.env into process.env when DSH is running. Lets agents write .env and have subsequent plugin/MCP calls see the new values without restarting dsh web.",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0",
+    "@types/node": "^22.20.0",
+    "typescript": "~5.7.2"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "license": "MIT"
+}

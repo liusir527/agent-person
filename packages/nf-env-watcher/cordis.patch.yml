@@ -1,0 +1,7 @@
+# @nsfocus/nf-env-watcher —— bundle 补丁层
+# 让 DSH web profile 把本包作为 cordis Loader entry 加载；
+# apply() 在启动时建立 fs.watch(<cwd>/.env)，后续 .env 变化时
+# 重读并合并到 process.env（仅非 bootstrap-only 变量）。
+- insert:
+    - id: nf-env-watcher
+      name: '@nsfocus/nf-env-watcher'
