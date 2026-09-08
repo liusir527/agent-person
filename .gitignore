@@ -55,3 +55,16 @@ deploy.log
 
 
 runtime/*
+
+# === packages/* —— 6 个 DSH NF 插件 ===
+# 每个子包都是独立 npm package：node_modules 与 lib 是构建产物，不入库；
+# pnpm-lock 锁定到具体机器的 pnpm store hash，多人协作易冲突，禁入库。
+packages/*/node_modules/
+packages/*/lib/
+packages/*/pnpm-lock.yaml
+packages/*/.modules.yaml
+packages/*/.package-map.json
+packages/*/.pnpm-workspace-state-v1.json
+packages/*/.pnpm-store/
+# bootstrap 脚本的临时产物（如有）
+scripts/.tmp/
