@@ -31,7 +31,7 @@
 #
 # Optional env vars:
 #   FORCE_REBUILD=1    force rebuild of TS packages even if lib/ exists
-#   FORCE_RELINK=1     force re-link of all 6 NF packages to web profile
+#   FORCE_RELINK=1     force re-link of all 7 NF packages to web profile
 #
 [CmdletBinding()]
 param()
@@ -101,8 +101,8 @@ if ([int]$nodeVer -lt 22) {
   throw "Node $(& node -v) too old; need >= 22.19"
 }
 
-# --- 2. Define the 6 NF packages (single source of truth) --------------
-$tsPackages   = @('nf-hooks', 'nf-gdb-guard', 'nf-system-prompt')
+# --- 2. Define the 7 NF packages (single source of truth) --------------
+$tsPackages   = @('nf-hooks', 'nf-gdb-guard', 'nf-system-prompt', 'nf-env-watcher')
 $allPackages  = @('nf-brand', 'nf-bug-progress', 'nf-terminal-monitor') + $tsPackages
 
 foreach ($p in $allPackages) {
@@ -139,7 +139,7 @@ foreach ($p in $tsPackages) {
   }
 }
 
-# --- 4. Link 6 NF packages to DSH web profile (idempotent) --------------
+# --- 4. Link 7 NF packages to DSH web profile (idempotent) --------------
 $profileDir = Join-Path $env:USERPROFILE '.dsh\profiles\web'
 $profileManifest = Join-Path $profileDir 'package.json'
 if (-not (Test-Path $profileManifest)) {
@@ -178,7 +178,7 @@ $missing = $allPackages | Where-Object { -not ($bundles -match "^@nsfocus/$_$") 
 if ($missing) {
   throw "These packages are missing from bundles: $($missing -join ', '). Check each package.json dsh.bundle.patch field."
 }
-Write-Host "  OK - all 6 NF packages registered in web profile.bundles"
+Write-Host "  OK - all 7 NF packages registered in web profile.bundles"
 
 # --- 6. Python: detect interpreter + install required packages ----------
 Write-Host ""
