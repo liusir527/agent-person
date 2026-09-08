@@ -140,6 +140,32 @@ claude mcp add \
 - 无确认提示就更新生产数据
 - 在日志或错误消息中暴露敏感数据
 
+### JIRA/Confluence 环境变量放哪里
+
+四个凭证变量必须按下面规则落地：
+
+| 变量 | 放哪里 | 说明 |
+|---|---|---|
+| `JIRA_URL` | `<cwd>/.env` | 应用层配置，可 hot-reload |
+| `JIRA_PERSONAL_TOKEN` | `<cwd>/.env` | 应用层配置，可 hot-reload |
+| `CONFLUENCE_URL` | `<cwd>/.env` | 应用层配置，可 hot-reload |
+| `CONFLUENCE_PERSONAL_TOKEN` | `<cwd>/.env` | 应用层配置，可 hot-reload |
+
+`<cwd>/.env` 是工作区根目录（PowerShell launcher 的 `WorkingDirectory`）下的 `.env` 文件。
+仓库里的 `@nsfocus/nf-env-watcher` 插件会在它变化时**自动 hot-reload 到 dsh web 的 `process.env`**，无需重启。
+
+**禁止**把以上变量写到：
+
+- `~/.dsh/.env`（DSH home 层，会跟 cwd 层混淆优先级）
+- 启动 dsh web 的 shell 里 export（如 `setx` 永久写注册表）—— 这些不是应用层变量，混在一起不安全
+- `cordis.patch.yml` 的 `!!js process.env.X` 表达式里硬编码（除非是占位符）
+- **bootstrap-only 变量**（`DSH_*` / `PATH` / `*_PROXY` / `NODE_*` 等）—— DSH 设计上禁止出现在 `.env` 里，nf-env-watcher 会拒绝整个 reload 并日志告警
+
+**首次部署**（无 token）：先在 JIRA/Confluence 创建 PAT → 用 `write` 工具创建 `<cwd>/.env` 写入 token → 验证 `runtime/nf-env-watcher.log` 出现 `event=reload applied=[..., JIRA_PERSONAL_TOKEN, ...]` 行 → 在对话里问"agent 调一下 jira_search 看看我是谁"验证 token 生效。
+
+**轮换 token**：直接编辑 `<cwd>/.env` 替换值即可，无需重启 dsh web。
+
+
 ## 输出模板
 
 实现Atlassian MCP功能时，提供：
