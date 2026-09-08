@@ -68,3 +68,12 @@ packages/*/.pnpm-workspace-state-v1.json
 packages/*/.pnpm-store/
 # bootstrap 脚本的临时产物（如有）
 scripts/.tmp/
+
+# Python 编译缓存（含 .pyc、__pycache__/；跨目录通用）
+__pycache__/
+*.pyc
+*.pyo
+
+# git-filter-repo 替换规则（含已撤销的 token 行 + 机器路径，不入库）
+config/secret-cleanup.txt
+config/*.replace.*
