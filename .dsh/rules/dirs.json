@@ -1,0 +1,15 @@
+{
+  "mode": "restricted",
+  "dirs": [
+    {
+      "path": "C:\\Users\\DELL\\.dsh",
+      "reason": "DSH home dir (profiles, sessions, plugins); bootstrap needs write access to manage the web profile and inject the mcp-memory patch. Maintainers: edit when relocating $DSH_HOME.",
+      "addedBy": "scripts/bootstrap-nf-plugins.ps1"
+    },
+    {
+      "path": "C:\\Users\\DELL\\.dsh-memory",
+      "reason": "Memory system root; bootstrap installs scripts/mcp_memory.py here. Maintainers: edit when relocating the memory dir.",
+      "addedBy": "scripts/bootstrap-nf-plugins.ps1"
+    }
+  ]
+}
