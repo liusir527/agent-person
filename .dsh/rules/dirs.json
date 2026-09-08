@@ -10,6 +10,16 @@
       "path": "C:\\Users\\DELL\\.dsh-memory",
       "reason": "Memory system root; bootstrap installs scripts/mcp_memory.py here. Maintainers: edit when relocating the memory dir.",
       "addedBy": "scripts/bootstrap-nf-plugins.ps1"
+    },
+    {
+      "path": "F:\\software\\NF605\\npp\\606\\npp",
+      "reason": "npp源码基准目录",
+      "addedBy": ""
+    },
+    {
+      "path": ".\\runtime",
+      "reason": "运行时临时目录（analysis-only-workflow / vpp-api-sync / ssh-tools / gdb-tools 等 skill 的会话级产物）。不入库，按 SESS 子目录隔离，任务结束保留即可。",
+      "addedBy": "scripts/bootstrap-nf-plugins.ps1 (analysis-only-workflow 落地时追加)"
     }
   ]
 }

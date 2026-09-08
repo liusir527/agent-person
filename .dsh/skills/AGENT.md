@@ -3,11 +3,12 @@
 > 本目录存放可复用的技能定义，每个技能一个子目录，内含 `SKILL.md` 元数据定义 + 实现脚本/工具。
 > 技能索引与导航见 [../init/skills-index.md](../init/skills-index.md)。
 
-## 技能清单（12 个）
+## 技能清单（13 个）
 
 | 技能 | 目录 | 一句话用途 |
 |------|------|-----------|
 | bug-fix-workflow | [bug-fix-workflow/SKILL.md](bug-fix-workflow/SKILL.md) | 网络安全设备项目的端到端 BUG 修复工作流 |
+| requirement-dev-workflow | [requirement-dev-workflow/SKILL.md](requirement-dev-workflow/SKILL.md) | 需求开发工作流（聚焦 VPP/npp 层）：需求澄清→设计→评审→实施→受限环境测试→交付，含状态机引擎与常态策略 |
 | certificate-apply | [certificate-apply/SKILL.md](certificate-apply/SKILL.md) | 绿盟内部支持系统的证书申请全流程自动化 |
 | deploy-build | [deploy-build/SKILL.md](deploy-build/SKILL.md) | 增量部署编译 NPP 项目（同步→编译→推送） |
 | gdb-tools | [gdb-tools/SKILL.md](gdb-tools/SKILL.md) | 接入远程设备已 attach 到 VPP 的 GDB 会话 |

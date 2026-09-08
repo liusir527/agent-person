@@ -93,3 +93,100 @@
 - 跳过门禁直接编码 → 视为流程违规，需回退到上一状态重新执行
 - 手改 state.json → 状态机失效，需要 reset 重新开始
 - 跨层取证（SSH/读取非本层源码）→ 视为扩散违规，回退到任务边界重新分析，并在响应中向用户致歉说明
+
+---
+
+## 运行时产物纪律（所有 skill / 脚本 / 子 agent 必读，2025-11-27 立）
+
+> 教训来源：本次新建 `analysis-only-workflow` skill 时，状态目录最初锚定在 `<项目根>/analysis-state/<slug>/`，落地后才发现与现有 `runtime/<SESS>/` 约定（vpp-api-sync / ssh-tools / gdb-tools 等）冲突，不得不返工重定位到 `runtime/analysis/<slug>/`。同类新 skill / 新脚本还会撞同样的坑——必须把纪律提到全局铁律层。
+
+### 铁律（适用于所有产线 skill / Python 脚本 / 子 agent 派发输出）
+
+1. **运行时临时数据必须落到 `<项目根>/runtime/<分类>/<SESS>/` 下**。禁止落到 workspace 根或仓库其他位置。常见分类：
+   - `runtime/analysis/<slug>/` —— 无 bug 单的简化分析闭环（analysis-only-workflow）
+   - `runtime/<SESS>/<模块>.api.json` —— vpp-api-sync 暂存
+   - `runtime/terminal-monitor/` —— ssh-tools 命令流水
+   - 其他分类由 skill 自定义但必须以 `runtime/` 起头
+2. **状态机/脚本内的 `DEFAULT_STATE_DIR`、`OUTPUT_DIR`、`out_dir` 等常量默认值必须指向 `runtime/` 子目录**；不允许默认写到 `analysis-state/` / `bug-fix-state/` / `feature-state/` / 其他仓库根平铺目录。
+3. **`init` / 脚本启动时若状态目录在 workspace 外**（自定义 `--dir`），禁止自动 `mkdir -p` 到 workspace 根；只在指定目录创建。
+4. **`.dsh/rules/dirs.json` 必须包含 `runtime` 登记**（路径写 `.\runtime`），否则 restricted 模式下脚本初始化会被 nf-hooks 拦截。这是 L2 硬门禁生效的前置条件。
+5. **跨脚本/跨 skill 复用同一 `<SESS>/`** 时，由该 skill 的状态机统一调度，避免同一 SESS 多脚本各自建子目录。
+
+### 反例（避免重蹈覆辙）
+
+- ❌ `<项目根>/analysis-state/<slug>/` —— 与 runtime 约定冲突，污染 workspace 根
+- ❌ `<项目根>/bug-fix-state/<BUG单号>/` —— 同上（既有 bug-fix-workflow 历史产物，本次不重定位，留待后续 PR）
+- ❌ `<项目根>/feature-state/<需求单号>/` —— 反例（requirement-dev-workflow 已于落地时迁移至 `runtime/req/`，勿再新建）
+- ❌ `<项目根>/tmp/<slug>/` —— 同上
+- ✅ `<项目根>/runtime/analysis/<slug>/` —— analysis-only-workflow 落地后的合规落点
+- ✅ `<项目根>/runtime/<SESS>/<模块>.api.json` —— vpp-api-sync 既有约定
+- ✅ `<项目根>/runtime/terminal-monitor/` —— ssh-tools 既有约定
+
+### 与现有 skill 约定对齐速查
+
+| skill | 既有落点 | 状态 |
+|---|---|---|
+| bug-fix-workflow | `bug-fix-state/<BUG单号>/` | 历史产物，不在本次重定位范围（未来如需迁移到 `runtime/bugfix/<BUG单号>/` 走单独 PR） |
+| requirement-dev-workflow | `runtime/req/<需求单号>/` | ✅ 已合规（落地时按纪律迁移） |
+| vpp-api-sync | `runtime/<SESS>/<模块>.api.json` | ✅ 已合规 |
+| ssh-tools | `runtime/terminal-monitor/` | ✅ 已合规 |
+| gdb-tools | `runtime/test_gdb_guard.mjs` | ✅ 已合规 |
+| analysis-only-workflow | `runtime/analysis/<slug>/` | ✅ 本次重定位后已合规 |
+
+---
+
+## 需求开发流程铁律（每次启动自动加载）
+
+> 以下规则适用于所有 NF 需求开发任务（聚焦 VPP/npp 层，C 语言），脚本见
+> `skills/requirement-dev-workflow/requirement_state_machine.py`。
+> 与 BUG 修复流程铁律共享状态机/门禁/对抗评审/worktree 隔离/闭环沉淀骨架；
+> 差异：首阶段做「需求澄清」而非「找根因」，受限环境测试是**常态策略**而非应急手段。
+
+### 主状态机（顺序推进，不可跳跃）
+
+```text
+需求澄清 → 需求分析 → 方案评审 → 出实施计划 → 编码实现 → 测试验证 → 交付上线 → 结束
+```
+
+### 铁律
+
+1. **先 init 再动作**：拿到需求单必须先执行 `requirement_state_machine.py init --req-id <单号> --title "..." --module "..."`，后续状态一律由脚本驱动，禁止手改 state.json。状态目录 `<项目根>/runtime/req/<需求单号>/`（运行时产物纪律）。
+
+2. **验收标准先行**：需求理解说明书必须含可量化/可判定的验收标准，且经需求方确认（`confirm --flag requirement_confirmed`）才能进入需求分析；无验收标准的方案不得进入编码。
+
+3. **评审通过才能编码**：需求设计说明书未经对抗评审（design-reviewer，按验收标准可推演/可测试）不得进入实施计划。评审最多 3 轮，FAIL 且轮次 < 3 回「需求分析」重新调研；第 3 轮 FAIL 自动转人工接管。
+
+4. **用户确认双闸**：需求理解+验收标准（requirement_confirmed）、实施计划（plan_confirmed）两处均须人工 `confirm` 置位，禁止用 `gate` 命令自行置位（脚本拦截）。
+
+5. **编码前必须门禁检查**：每次编码前先执行 `gate-check --req-id <单号>`，门禁拒绝（exit 2）时禁止修改文件，先补足前置条件。
+
+6. **推进必 advance / 编译必验证**：每个主状态完成后必须 `advance --to <下一状态>`；编码结束必须编译验证，`build_passed` 置位须带 `--evidence <编译日志路径>`（证据型门禁）。
+
+7. **代码审查闭环**：编码实现必须走 code-reviewer 审查（复用 `.dsh/agents/code-reviewer/code-reviewer.md`），PASS 落盘 `代码审查报告-rN.md` 后 `gate --flag code_reviewed --evidence <报告>`；FAIL 且轮次<3 回「修改」修正，第 3 轮 FAIL 转人工接管。
+
+8. **受限环境测试（常态策略）**：VPP 层需求测试常无完整联调环境；**能测的必须测**（单测/受限环境运行态/冒烟），**不能测的显式列「交接项」**（责任人+环境+时机）进 `测试记录.md`；禁止用"环境受限"当不测试的借口；`test_passed` 含"可测项全过 + 交接项已登记"。
+
+9. **闭环必须交结论+沉淀经验**：实现+受限测试 → 人工验收 → MR（格式 `feat: NEWNF-XXXXX 【模块】描述`）→ 人工 review → 合并/部署 → 必须先执行经验沉淀（memory-gen 生成经验文档到 `<workspace_root>/.dsh-memory/knowledge/experiences/sparse/` 并更新索引，再 memory-push 推送 git，然后 `micro --to 沉淀经验`）→ 输出 `XX需求-REQ-SEQ需求实现说明.md`（放 npp 仓库根）→ `close`。close 门禁强制校验微观状态已推进到「沉淀经验」。
+
+10. **进度必须可观测**：状态机每次落盘自动刷新 `runtime/req/<需求单号>/progress.md`；每次推进/门禁变化后回复中必须输出当前阶段横幅 `▸ 阶段：x/8 · 主状态 · 微观`，进入新回合或用户询问进度时先 `progress --req-id <单号>` 展示进度总览。
+
+11. **TDD 铁律**：编码实现阶段，无失败测试不写生产代码；每个新增函数/行为先写失败测试（红）→ 最小实现（绿）→ 重构；验收标准必须先转成测试用例才有判据。
+
+12. **完成前校验**：任何"完成/通过"断言必须带当轮运行证据（命令输出/退出码/测试结果），禁止"应该/大概/似乎"或先满意后校验。
+
+13. **外部状态变更确认**：合并/部署/上线 一律先问"谁操作"（您自行 / AI 代为 / 转他人），代为执行绝不默认 Recommended，执行前回显精确动作；`confirm --flag merged` 只登记事实，不代操作。
+
+### 需求开发任务边界（从 bug-fix 教训固化）
+
+1. **配置管理类需求归属 AGENT/WEB**，不作为 VPP 需求范围；VPP 只作配置消费方（biapi 接收）或数据产生方（biapi 上报）。
+2. **取证动作与修改动作同边界**：SSH/文件读取目标是 WEB/AGENT/system-manage 等非 npp 层源码时，即使只读也一律禁止，属扩散；需要跨层理解时先停手问用户。
+3. **显示/统计类问题从 VPP 运行态取证**：先 vppctl / show 命令 / npp 输出文件，缺数据再在 npp 源码内找产生方。
+4. **探索必带停判句**：每个取证/探索动作后必须输出"结论：X；若此结论为假，方案是否受影响"，写不出这句 = 在漫游，立即停止。
+5. **违规即回退**：一旦读/写本层之外的源码或仓库，立即停止并向用户说明回退，重复违规标记为流程事故转用户接管。
+
+### 违规后果
+
+- 跳过门禁直接编码 → 视为流程违规，需回退到上一状态重新执行
+- 手改 state.json → 状态机失效，需要 reset 重新开始
+- 跨层取证（SSH/读取非本层源码）→ 视为扩散违规，回退到任务边界重新分析，并在响应中向用户致歉说明
+- 未登记交接项即置位 test_passed → 门禁无效，回退「测试验证」补登记
