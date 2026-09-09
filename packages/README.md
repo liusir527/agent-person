@@ -12,7 +12,7 @@
 | `@nsfocus/nf-terminal-monitor` | 终端命令审计面板 | `/api/nf-terminal-monitor/{list,summary,clear}` | sidebar footer 入口 + 居中模态 |
 | `@nsfocus/nf-hooks` | 文件访问门控（restricted 模式） | `tools/pre-execute` 拦截 | — |
 | `@nsfocus/nf-gdb-guard` | GDB 危险命令防护 | `tools/pre-execute` 拦截 | — |
-| `@nsfocus/nf-system-prompt` | System Prompt 注入（四问 / 修复流程 / 调试经验） | `systemPrompt.section()` | — |
+| `@nsfocus/nf-system-prompt` | System Prompt 注入（四问 / 修复流程 / 调试经验 + `.dsh/rules/*.md` 目录扫描） | `systemPrompt.section()` | — |
 
 前3 个是「dual-face」包（node + browser），后3 个是纯 node 拦截器 / 提示词注入。
 
@@ -74,6 +74,18 @@ curl http://127.0.0.1:3080/api/nf-terminal-monitor/list
 # 配置 dump：6 个 NF 包应在 bundles 列表
 dsh web --dump-config 2>$null | Select-String -Pattern 'nf-'
 ```
+
+## 规则文件注入（`.dsh/rules/`）
+
+`nf-system-prompt` 在启动时还会扫描 `<工作区根>/.dsh/rules/*.md`，
+将**带 YAML frontmatter** 的规则文件注入系统提示词（约定见 [`.dsh/rules/README.md`](../.dsh/rules/README.md)）：
+
+- `order`（必填，number）→ section 排序位；
+- `name`（可选）→ section 名；`enabled: false` → 跳过；
+- 无 frontmatter 的 md（如 `process-files.md`）不注入，避免与硬编码摘要重复。
+
+**新增规则 = 往 `.dsh/rules/` 丢一个带 frontmatter 的 md，重启 `dsh web` 即生效**，
+无需重编译本插件。仅当插件本体逻辑（`src/index.ts`）改动时才需要 `pnpm exec tsc`。
 
 期望输出包含以下6 行：
 
