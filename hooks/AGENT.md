@@ -190,3 +190,26 @@
 - 手改 state.json → 状态机失效，需要 reset 重新开始
 - 跨层取证（SSH/读取非本层源码）→ 视为扩散违规，回退到任务边界重新分析，并在响应中向用户致歉说明
 - 未登记交接项即置位 test_passed → 门禁无效，回退「测试验证」补登记
+
+## Skill 创建/编辑强制校验铁律（每次启动自动加载，2026-09-09 立）
+
+> 背景：`.dsh/skills/requirement-dev-workflow`（SKILL.md 缺 frontmatter）、`gns-topo` / `nf-auto-produce`
+> （frontmatter 内全角冒号裸行）均被 DSH 加载器静默忽略，skill 长期不出现且无人察觉。
+> 文档规约不足以防漏（SKILL_AUTHORING.md 早已写明 frontmatter 必填），故立硬校验铁律。
+
+1. **新建或编辑 `.dsh/skills/` 下任何 skill 后，必须运行校验**：
+   `python .dsh/tools/skill_lint.py --path .dsh/skills/<skill-name>`（单目录）
+   或 `python .dsh/tools/skill_lint.py`（全量）。exit 0 = 无 ERROR；exit 1 = 存在 ERROR。
+2. **校验不过（exit 1）= 任务未完成**：禁止交付、禁止提交、禁止声称"已完成"、禁止进入下一阶段；
+   必须修复全部 ERROR 后复跑至 exit 0。WARN 允许放行但需知晓。
+3. **frontmatter 是 DSH 加载器的硬性前提**：SKILL.md 首行必须为 `---`，且必含 `name` 与 `description`
+   两个字段；`name` 仅允许小写字母/数字/连字符；正文引用 `references/`、`templates/` 的文件必须真实存在。
+4. **全角冒号陷阱（真实事故）**：frontmatter 内键值分隔必须是半角冒号 `:`。`触发条件：xxx` 这类全角冒号行
+   会被 YAML 解析器当作裸文本，导致整个 frontmatter 解析失败、skill 被静默忽略（gns-topo / nf-auto-produce）。
+   触发词应写入 `description` 字段内部，而不是另起一行裸文本。
+5. **新增 skill 先查本铁律与 SKILL_AUTHORING.md 8.5 节再落盘**；发现存量 skill 校验不过，先修存量再谈新增。
+6. **写入级硬拦截（nf-hooks 插件自动执行，无需手动触发）**：对 `.dsh/skills/<name>/SKILL.md` 的 write/edit，
+   在写入前由 `packages/nf-hooks` 自动校验 frontmatter 硬前提（首行 `---` / `name`·`description` 必填 /
+   `name` 合法 / 无全角冒号裸行），不过即拒绝写入并回显原因。这是最后一道自动化防线；
+   **「创建完跑全量 skill_lint」仍必须**——两者层次不同：插件防「必然不加载」的硬伤，
+   全量 lint 防其余规约问题（references 缺失、章节建议等）。插件逻辑改动后需重启 DSH 生效（lib 编译产物）。

@@ -12,6 +12,112 @@ const FILE_TOOLS = new Set(['read', 'write', 'edit', 'glob', 'grep'])
 // shell 工具列表：从 command 参数提取盘符路径做门控，堵住 read/write/edit 的旁路
 const SHELL_TOOLS = new Set(['pwsh', 'bash', 'sh', 'cmd', 'powershell'])
 
+// ---------------------------------------------------------------------------
+// SKILL.md frontmatter 硬校验（判据与 .dsh/tools/skill_lint.py 的 DSH 加载器硬前提对齐：
+// frontmatter 缺失 / 解析失败（含全角冒号裸行陷阱）/ 缺 name·description / name 非法。
+// 只校验 SKILL.md 文本自身，不依赖目录状态（references 等由创建完成后的 skill_lint 全量把关）。
+// 命中任一条即等于 DSH 加载器会静默忽略该 skill，因此直接 deny 写入。
+// ---------------------------------------------------------------------------
+export function validateSkillFrontmatter(text: string): string[] {
+  const errors: string[] = []
+  const lines = text.split(/\r?\n/)
+  if (lines.length === 0 || lines[0].trimEnd() !== '---') {
+    errors.push('缺少 YAML frontmatter：首行必须为 ---（DSH 加载器将静默忽略本 skill）')
+    return errors
+  }
+  // 找 frontmatter 结束标记（前 100 行内）
+  let fmEnd = -1
+  for (let i = 1; i < Math.min(lines.length, 100); i++) {
+    if (lines[i].trimEnd() === '---') {
+      fmEnd = i
+      break
+    }
+  }
+  if (fmEnd < 0) {
+    errors.push('frontmatter 未闭合：缺少结束标记 ---')
+    return errors
+  }
+
+  const fields = new Map<string, string>()
+  let curKey: string | null = null
+  const fmLines = lines.slice(1, fmEnd)
+  for (const raw of fmLines) {
+    const ln = raw
+    if (!ln.trim() || ln.trimStart().startsWith('#')) continue
+    if (/^[ \t]/.test(ln) || /^[-*]/.test(ln.trimStart())) {
+      // continuation：缩进行 / 列表项并入上一个 value（与 YAML folding 对齐）
+      if (curKey) fields.set(curKey, (fields.get(curKey) ?? '') + ' ' + ln.trim())
+      continue
+    }
+    const m = /^([^:]+):\s*(.*)$/.exec(ln)
+    if (!m) {
+      errors.push(
+        `frontmatter 存在无法解析的行: ${ln.slice(0, 40)}（应为 'key: value' 形式；注意中文全角冒号 '：' 会让整行变成裸文本，导致 YAML 解析失败、DSH 忽略本 skill）`,
+      )
+      continue
+    }
+    const key = m[1].trim()
+    const val = m[2].trim()
+    if (curKey === key) {
+      fields.set(key, (fields.get(key) ?? '') + ' ' + val)
+    } else {
+      fields.set(key, val)
+      curKey = key
+    }
+  }
+
+  const name = fields.get('name') ?? ''
+  const description = fields.get('description') ?? ''
+  if (!name) {
+    errors.push('frontmatter 缺少必填字段: name')
+  } else if (!/^[a-z0-9-]+$/.test(name)) {
+    errors.push(`frontmatter name 不合法: ${name}（仅允许小写字母/数字/连字符）`)
+  }
+  if (!description) {
+    errors.push('frontmatter 缺少必填字段: description（触发词应写入 description 内，不要另起一行裸文本）')
+  }
+  return errors
+}
+
+// 命中 .dsh/skills/<skill-name>/SKILL.md 的 write/edit：预演目标内容并做 frontmatter 硬校验
+function skillFrontmatterErrors(workspaceRoot: string, exec: { arguments: Record<string, unknown> }): { skillDir: string; errors: string[] } | null {
+  const filePath = (exec.arguments?.file_path ?? exec.arguments?.path) as string | undefined
+  if (!filePath || typeof filePath !== 'string') return null
+  const resolved = path.resolve(workspaceRoot, filePath)
+  const rel = path.relative(workspaceRoot, resolved)
+  const seg = rel.split(path.sep)
+  // 必须恰为 .dsh/skills/<name>/SKILL.md（不拦截 references/ 等其他文件）
+  if (seg.length !== 4 || seg[0] !== '.dsh' || seg[1] !== 'skills' || seg[3] !== 'SKILL.md' || !seg[2]) {
+    return null
+  }
+
+  let nextText: string
+  if (exec.arguments?.content !== undefined) {
+    // write：全量覆盖
+    nextText = String(exec.arguments.content)
+  } else if (typeof exec.arguments?.old_string === 'string' && typeof exec.arguments?.new_string === 'string') {
+    // edit：读现有文件 + 应用替换，预演终态
+    let current = ''
+    try {
+      current = fs.readFileSync(resolved, 'utf-8')
+    } catch {
+      /* 文件尚不存在：以空文本为基底 */
+    }
+    const oldStr = exec.arguments.old_string
+    const newStr = exec.arguments.new_string
+    if (exec.arguments.replace_all === true) {
+      nextText = current.split(oldStr).join(newStr)
+    } else {
+      // 与 edit 工具语义对齐：仅当唯一出现才替换；出现多次时工具自身会拒绝，预演按单次替换
+      nextText = current.replace(oldStr, newStr)
+    }
+  } else {
+    return null
+  }
+
+  return { skillDir: seg[2], errors: validateSkillFrontmatter(nextText) }
+}
+
 export function apply(ctx: Context) {
   // 工作区根 = 启动进程的 cwd（目录迁移后即仓库根，如 E:\agent_assets），统一规范化路径分隔符
   const workspaceRoot = path.resolve(process.cwd())
@@ -109,6 +215,20 @@ export function apply(ctx: Context) {
         return {
           kind: 'deny',
           reason: `路径 "${filePath}" 不在可访问范围内。`,
+        }
+      }
+      // SKILL.md 写入格式门禁（用户可选软/硬：硬校验 —— 命中即拒，防 skill 被 DSH 静默忽略）
+      if (toolName === 'write' || toolName === 'edit') {
+        const skillHit = skillFrontmatterErrors(workspaceRoot, { arguments: args })
+        if (skillHit !== null && skillHit.errors.length > 0) {
+          console.log(`[nf-hooks] deny skill 写入（${skillHit.skillDir}/SKILL.md）：${skillHit.errors.length} 个格式问题`)
+          return {
+            kind: 'deny',
+            reason:
+              `SKILL.md 格式校验未通过（若不修复，DSH 加载器将静默忽略此 skill），共 ${skillHit.errors.length} 个问题：\n` +
+              skillHit.errors.map((e) => `- ${e}`).join('\n') +
+              `\n修复后重试。完整规约校验请运行：python .dsh/tools/skill_lint.py --path .dsh/skills/${skillHit.skillDir}`,
+          }
         }
       }
       return next()

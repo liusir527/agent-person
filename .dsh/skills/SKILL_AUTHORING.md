@@ -140,6 +140,29 @@ description: <一句话定位 + 触发词列表 + 反例（何时不使用）>
 - [ ] `gate --flag code_reviewed` 缺 `--evidence` 被拒
 - [ ] `gate --flag plan_confirmed` 被拒（必须用 confirm）
 
+## 8.5 强制校验（创建 / 编辑 skill 后必跑，不过关禁止交付）
+
+> 由 `hooks/AGENT.md`「Skill 创建/编辑强制校验铁律」强制。**本规约正文不足以防漏**——requirement-dev-workflow
+> 缺 frontmatter、gns-topo / nf-auto-produce 全角冒号裸行，都是"规约写了但没被执行"的真实事故，脚本硬校验才能兜底。
+
+1. **命令**：`python .dsh/tools/skill_lint.py --path .dsh/skills/<skill-name>`；全量体检用
+   `python .dsh/tools/skill_lint.py`。exit 0 = 无 ERROR（WARN 允许）；exit 1 = 存在 ERROR → **禁止交付**。
+2. **ERROR 级（必须修复）**：目录名非法（非 `[a-z0-9-]`）/ 缺 SKILL.md / 无 YAML frontmatter /
+   frontmatter 解析失败 / 缺 `name` 或 `description` / `name` 非法字符 / 正文引用 `references/`·`templates/`
+   的文件缺失。
+3. **WARN 级（不阻塞，但新增 skill 应避免）**：`description` 超 500 字符；`name` 与目录名不一致
+   （`gdb-tools`/`gdb-attach` 先例，DSH 以 `name` 注册，须确认有意为之）；未收录白名单的 frontmatter
+   自定义字段（新字段在脚本 `FRONTMATTER_KNOWN_KEYS` 登记，勿随意加）；正文缺「触发词」或「流程主体」章节。
+4. **失败案例（真实事故）**：
+   - `requirement-dev-workflow`：SKILL.md 首行直接是 `# 标题`、无 frontmatter → DSH 加载器 ignore → skill 从不出现
+   - `gns-topo` / `nf-auto-produce`：frontmatter 内写了 `触发条件：xxx`（**全角冒号**）→ YAML 当裸文本 →
+     整段解析失败 → DSH ignore
+5. **正确姿势**：触发词并入 `description` 字段内；多行说明用缩进 continuation 或并入 description 一行；
+   键值分隔一律半角冒号 `:`。
+6. **写入级硬拦截（nf-hooks 插件自动执行）**：对 `.dsh/skills/<name>/SKILL.md` 的 write/edit，在写入前由
+   `packages/nf-hooks` 自动校验 frontmatter 硬前提（判据与本节 ERROR 级对齐），不过直接拒写并回显原因。
+   这是最后一道自动化防线，**创建完成后跑全量 `skill_lint` 的流程不变**（插件只防"必然不加载"的硬伤）。
+
 ## 9. 不做的事
 
 - ❌ 不创建 worktree / 分支（除非用户明确要求）

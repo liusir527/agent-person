@@ -1,7 +1,7 @@
 ---
 name: gns-topo
 description: GNS3/EVE-NG 拓扑生成指南（通用规则，始终加载）
-触发条件：生成拓扑，帮我创建一个拓扑，生成GNS3拓扑，生成EVE-NG拓扑
+  触发条件：生成拓扑，帮我创建一个拓扑，生成GNS3拓扑，生成EVE-NG拓扑
 ---
 
 # GNS3 / EVE-NG 拓扑生成指南 — 通用规则

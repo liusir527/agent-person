@@ -1,3 +1,8 @@
+---
+name: requirement-dev-workflow
+description: 需求开发工作流（VPP/npp 层，C 语言）端到端闭环的总调度器。适用于需求澄清、任务边界、环境准备、设计、实现、代码审查、测试、交付沉淀的完整需求开发流程，共享状态机门禁、对抗评审、worktree 隔离、闭环沉淀机制。触发词：需求开发、需求澄清、需求设计、需求实现、需求测试、需求交付、需求单、REQ-。
+---
+
 # 需求开发工作流（requirement-dev-workflow）
 
 将本 skill 作为需求开发（VPP/npp 层，C 语言）的总调度器。保持当前上下文精简：按阶段加载对应 reference，
