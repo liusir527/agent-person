@@ -4,7 +4,12 @@ import { join, dirname } from 'node:path'
 import { parseEnv } from 'node:util'
 
 export const name = 'nf-env-watcher'
-export const inject = ['logger']
+// `logger` is a built-in property of every Cordis Context (Context constructor
+// sets `this.logger = new LoggerService(...)`), NOT a registry service under
+// dsh's cordis. Declaring it in `inject` makes boot wait for a provider that
+// nothing provides, leaving this plugin `pending` forever and failing dsh
+// web's plugin-tree assert. `ctx.logger(name)` below is still available.
+export const inject = []
 
 /* ------------------------------------------------------------------ *
  * Bootstrap-only mirror of @deepseek-ai/dsh-app-boot BOOTSTRAP_NAMES
