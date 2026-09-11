@@ -141,15 +141,22 @@ def check_frontmatter(path: Path, errors: list) -> bool:
 
 
 def check_index_consistency(path: Path, errors: list) -> bool:
-    """校验索引一致性：knowledge/ 分区索引.md 是否包含该文件"""
+    """校验索引一致性（P0-2 升级为硬校验）：knowledge/ 分区索引.md 必须包含该文件
+
+    规则：
+    - 知识文件所在目录必须有 索引.md，且内容含该文件名 → 否则 FAIL；
+    - 例外：索引文件自身（索引.md / 导航索引）不校验。
+    """
     ok = True
     # 知识文件所在目录的索引.md
     index_file = path.parent / '索引.md'
-    if index_file.exists():
-        idx_content = index_file.read_text(encoding='utf-8', errors='ignore')
-        if path.name not in idx_content:
-            # 可能是新增文件尚未加索引行 → 提示（不 FAIL，memory-gen 会维护）
-            print(f"[提示] {path.name} 不在 {index_file.name} 中（若为新增请确认已加索引行）")
+    if not index_file.exists():
+        errors.append(f"{path.name}: 所在目录缺少索引文件 {index_file.name}（请先创建分区索引并登记本文件）")
+        return False
+    idx_content = index_file.read_text(encoding='utf-8', errors='ignore')
+    if path.name not in idx_content:
+        errors.append(f"{path.name}: 未登记在 {index_file.name} 中（请追加索引行）")
+        ok = False
     return ok
 
 
