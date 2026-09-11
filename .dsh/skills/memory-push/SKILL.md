@@ -1,6 +1,7 @@
----
+﻿---
 name: memory-push
 description: "将沉淀的知识推送到 git 仓库进行保存。适用于 memory-gen 已生成经验文档（.dsh-memory/knowledge/experiences/sparse/*.md）后，需要把知识提交 git 并推送远程备份的场景。触发词包括：推送知识、git保存经验、提交沉淀、同步知识到git、知识入仓。"
+scene: null
 user-invocable: true
 ---
 

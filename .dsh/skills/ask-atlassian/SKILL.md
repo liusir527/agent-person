@@ -1,6 +1,7 @@
----
+﻿---
 name: ask-atlassian
 description: 通过MCP协议对接公司JIRA Server和Confluence Server，支持使用JQL/CQL查询、创建和更新工单/文档、管理附件或设置MCP服务器认证。当需要查询JIRA问题、创建工单、搜索Confluence内容、创建文档或与Atlassian套件集成时使用此技能。
+scene: null
 author: BSA Team
 version: 1.0.0
 ---

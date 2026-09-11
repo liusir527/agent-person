@@ -1,6 +1,7 @@
----
+﻿---
 name: ssh-tools
 description: "Windows 平台的轻量 SSH 工具：批量/交互式执行远端命令，支持自定义端口、用户名、密码。当需要 SSH 登录服务器（批量命令、退出码）或网络设备（VPP、Cisco、华为等交互式 CLI）执行命令时使用。"
+scene: debug
 user-invocable: true
 allowed-tools:
   - Bash(python *)

@@ -1,6 +1,7 @@
----
+﻿---
 name: memory-gen
 description: "任务完成后的经验沉淀生成器。从刚完成的任务（配置、排障、开发、调试等）中提取可复用的、非特定环境的、能赋能其他 agent 的知识，按 <知识概要-年月日.md> 命名沉淀到 .dsh-memory/knowledge/experiences/sparse/ 目录（v2 知识库真实位置）。当用户提到'沉淀经验、抽萃知识、总结可复用经验、生成经验文档、memory-gen、经验入册'时使用。"
+scene: null
 user-invocable: true
 ---
 

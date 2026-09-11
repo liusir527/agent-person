@@ -1,6 +1,7 @@
----
+﻿---
 name: lightrag
 description: "LightRAG知识图谱工具。通过CLI与LightRAG服务器交互，支持文档管理、知识查询、实体/关系操作。当用户需要向LightRAG插入文档、查询知识图谱、管理文档生命周期、或操作实体和关系时使用此技能。"
+scene: null
 user-invocable: true
 allowed-tools:
   - Bash(npx tsx *$SKILL_DIR/lightrag-cli.ts *)

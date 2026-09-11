@@ -1,6 +1,7 @@
----
+﻿---
 name: nf-auto-produce
 description: NF防火墙设备自动化生产工具，支持恢复(recover)、配置(config)、组合(recover_config)、提取HASH(hash)四种模式
+scene: debug
   触发条件：重生产，恢复生产，生产电子盘，刷写电子盘，刷盘，设备生产，刷写，自动化生产，produce device，recover device
 ---
 

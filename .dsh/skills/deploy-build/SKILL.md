@@ -1,7 +1,8 @@
----
+﻿---
 name: deploy-build
 user-invocable: true
 description: "增量部署编译NPP项目：worktree 派生隔离 → filesync 同步本地改动到远端 → 多模式 nsbuild-git 编译 → CMake 反向依赖图扫描 → 从 .nsbuild/install/edisk 精确推送目标设备。支持 sync/build/install/diff/status 等模式"
+scene: develop
 allowed-tools:
   - Bash(python3 *deploy_build.py *)
 ---

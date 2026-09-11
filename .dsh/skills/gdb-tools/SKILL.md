@@ -1,6 +1,7 @@
----
+﻿---
 name: gdb-attach
 description: "GDB调试会话接入工具。以最小代价接入远程设备上已attach到VPP的GDB会话，支持reptyr抢占。当需要让AI操控远程设备上正在运行的GDB调试会话时使用。"
+scene: debug
 user-invocable: true
 allowed-tools:
   - Bash(pgrep *)
