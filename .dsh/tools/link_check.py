@@ -175,14 +175,24 @@ def run(targets: list[Path] = None, check_all: bool = False, repo: Path = None) 
     errors = []
     hints = []
 
+    # --repo 模式下知识根随 repo 推导（支持 submodule 内变更校验）
+    knowledge_dir = (repo / 'knowledge') if repo else KNOWLEDGE_DIR
+
+    def _is_kf(p: Path) -> bool:
+        try:
+            p.relative_to(knowledge_dir)
+            return p.suffix == '.md'
+        except ValueError:
+            return False
+
     if targets is None:
         if check_all:
-            targets = [p for p in KNOWLEDGE_DIR.rglob('*.md') if p.name != '索引.md']
+            targets = [p for p in knowledge_dir.rglob('*.md') if p.name != '索引.md']
             print(f"[link_check] 全量扫描 {len(targets)} 个知识文件（存量提示模式）")
         else:
             repo = repo or REPO_ROOT
             changed = git_changed_files(repo)
-            targets = [repo / p for p in changed if is_knowledge_file(repo / p)]
+            targets = [repo / p for p in changed if _is_kf(repo / p)]
             print(f"[link_check] 扫描 {len(targets)} 个本次变更知识文件（N2：存量豁免）")
 
     for t in targets:
