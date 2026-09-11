@@ -1,8 +1,6 @@
-# .dsh-memory 子仓（记忆系统）
-# URL 说明：本地开发阶段使用 file:// URL，指向本地已存在的 .dsh-memory 仓库。
-# 分发前请将 .dsh-memory 推送到远端仓库并更新此处 URL：
-#   git submodule set-url .dsh-memory <远端地址>
-# 新机器 clone 时：
-#   git clone --recursive <主仓URL>
+# .dsh-memory 子仓（记忆系统 / 蜂巢大脑知识库）
+# M0：补 url + branch，打通远端共享管道（原只有 path，新机器 clone --recursive 会失败）
 [submodule ".dsh-memory"]
 	path = .dsh-memory
+	url = https://github.com/liusir527/dsh-memory.git
+	branch = master
