@@ -78,6 +78,7 @@ user-invocable: true
 | link_check 显示 FAIL       | 断链/索引不一致/环境残留  | 按提示修复（补链接/索引/去残留），重跑至 PASS 再提交          |
 | link_check 扫 0 个文件     | 在主仓根跑，没扫到 submodule 内暂存 | 加 `--repo .dsh-memory`（步骤 3）                            |
 | push 被拒（远端领先）      | 冲突                     | 步骤 1 的 `pull --rebase` 保证；仍冲突则手动解决后重试        |
+| 两 agent 并发改同一知识文件（P2-#8） | last-write-wins 吞掉一次命中/内容 | **写前先 `git -C .dsh-memory pull --rebase` + 看是否命中同一文件**；约定：同一时刻仅单 agent 可改同一知识文件（按分区/文件分片），冲突时保留双方内容合并，不覆盖 |
 | 提交信息不达意             | 远端历史无法检索         | 中文，说明"沉淀了什么知识"                                   |
 
 ## 判定 / 决策依据
