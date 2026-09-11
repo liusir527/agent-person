@@ -1,4 +1,4 @@
-﻿---
+---
 name: mr-merge
 description: "MR 合并 / 批量 cherry-pick 工具。输入 commit 列表 + 目标分支，从目标分支 HEAD 派生 XX-MR 分支，按 author-date 从早到晚排序后逐个 cherry-pick；通过文件变更集相交预测冲突，预测会冲突的 commit 汇总到「需人工介入」列表由人工处理，自动阶段成功的 commit 实时落账；人工介入完成后调用 check 子命令逐一校验每个 commit 是否完整到达 MR 分支。触发词：MR合并、合并MR、批量cherry-pick、cherry-pick多个commit、批量合入、分支合并、批量迁移commit、合入多个commit、批量提交迁移、批量 cherry-pick。"
 scene: develop

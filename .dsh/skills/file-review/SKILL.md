@@ -1,4 +1,4 @@
-﻿---
+---
 name: file-review
 description: "主 agent（或被派发的写作者 subagent）完成文件落盘后，强制派发一个长期持有的 reviewer subagent（DSH run_in_background + send_message）对写入的文件进行多轮审查—修复—复审循环。每轮审查产出结构化问题清单，由原作者负责修复，reviewer 在同一会话中复审。最长 3 轮，第 3 轮仍未通过则降级为人工处理。"
 scene: debug

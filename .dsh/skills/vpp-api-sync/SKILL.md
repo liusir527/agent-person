@@ -1,4 +1,4 @@
-﻿---
+---
 name: vpp-api-sync
 description: "VPP *.api 文件改动后的 api.json 自动暂存移交。当本次代码修改涉及 VPP 插件 `*.api` 文件（vpp 与 vpp-agent 的 biapi 消息格式变化）时，编译通过后自动把编译机 build-root/install-<ARCH>/vpp/share/vpp/api/plugins/ 下生成的 `*.api.json` 下载到本地 runtime/<SESS>/ 暂存，供 vpp-agent 开发人员同步源码。触发词：*.api、api文件、biapi、api.json、vpp-agent、pbr.api、acl.api、api格式变化。用户不可手动触发（user-invocable: false），由模型按触发条件自动执行。"
 scene: debug

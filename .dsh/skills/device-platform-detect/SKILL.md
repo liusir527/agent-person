@@ -1,4 +1,4 @@
-﻿---
+---
 name: device-platform-detect
 description: "获取NF设备型号/电子盘类型/平台类型，确定 nsbuild-git -p 平台参数与 setup 选择。通过询问用户或 SSH 查看目标设备（cat /opt/nsfocus/etc/version.txt | grep packet_version）解析 packet_version（[项目名称]_[硬件架构]_[校验号]_[编译时间]），映射到 X86/C621/C621双、E2000Q、海光3/海光5 等平台；无法确定时把原始 packet_version 发给用户询问类型。触发词：设备型号、电子盘类型、平台类型、nsbuild-git -p、packet_version、version.txt、setup选择。"
 scene: debug

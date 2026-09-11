@@ -1,4 +1,4 @@
-﻿---
+---
 name: gns-topo
 description: GNS3/EVE-NG 拓扑生成指南（通用规则，始终加载）
 scene: develop
