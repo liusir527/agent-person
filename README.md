@@ -3,6 +3,52 @@
 DSH 工作区 —— 自托管的 `@deepseek-ai/dsh` 浏览器 Harness，
 附带 6 个 NF (NSFOCUS) 插件源（`packages/*`）。
 
+## 蜂巢大脑（Hive Brain）—— 本工作区同时是中央知识大脑
+
+> 已实施（2026-09-11，M0-M6 全链路通过）。这是一个**可复用、git 管理、汇总到 git 仓库的 AI 工作目录**：
+> 分散 agent 采集知识饲喂中央大脑，通过 git 双向共享。
+
+### 快速开始（新 agent 加入共享）
+
+```powershell
+# 1. 克隆（含知识大脑 submodule）
+git clone --recursive https://github.com/liusir527/agent-person.git
+cd agent-person
+
+# 2. 拉取最新大脑知识
+git submodule update --remote --merge
+
+# 3. 读统一入口
+#    init/manifest.yaml            → 工作区身份 + 当前场景
+#    init/scenes/<scene>.yaml      → 场景说明
+#    .dsh-memory/hive.yaml         → 蜂巢能力清单（唯一事实源）
+
+# 4. 检索知识（按场景）
+python .dsh-memory/scripts/search.py "关键词" --scene debug
+
+# 5. 沉淀知识（去毒四问 → memory-gen → memory-push）
+```
+
+### 核心组件
+
+| 组件 | 位置 | 说明 |
+|------|------|------|
+| 统一入口 | `init/` | 工作区身份 + 场景定义 + 新 agent 引导 |
+| 中央大脑 | `.dsh-memory/`（submodule） | 四类知识：product / skills / scenes / experiences |
+| 记忆曲线漏斗 | `.dsh-memory/scripts/{tier_manager,search,backfill_weights}.py` | 权重命中/复用上调、Ebbinghaus 衰减、分层流转 |
+| 场景命名空间 | skill `scene:` 标签 + `knowledge/scenes/<scene>/` | develop/debug 场景隔离，免 git 分支切换 |
+| 蜂巢派生 | `.dsh-memory/hive.yaml` + `.dsh/agents/hive/base.md` + `.dsh/tools/hive_spawn.py` | agent 出生携带全部能力，可 spawn/sync 裂变 |
+| 去毒门禁 | `.dsh/rules/knowledge-sedimentation.md` + `.dsh/tools/link_check.py` | 沉淀前必过"去毒四问"，提交前 link_check PASS |
+
+### 沉淀流程（每个 agent 的义务）
+
+```
+任务完成 → 去毒四问（通用/普适/非一次性/可验证）→ memory-gen 写入 knowledge/<类别>/
+        → link_check PASS → memory-push（git -C .dsh-memory add/commit/push → 主仓 gitlink → push）
+```
+
+---
+
 ## 5 分钟启动
 
 ### 前置
