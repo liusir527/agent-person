@@ -37,7 +37,8 @@ REQUIRED_FIELDS_SCENE = REQUIRED_FIELDS + ['problem_id', 'scene']
 # 启发式语义检查正则（命中即疑似环境残留）
 SENSITIVE_PATTERNS = [
     (r'\b(\d{1,3}\.){3}\d{1,3}\b', 'IP 地址'),
-    (r'[A-Za-z]:[\\/][^\s"\'|<>]{3,}', '绝对路径'),
+    # 绝对路径：排除 URL（scheme:// 会被 [A-Za-z]:[\\/] 误匹配 s://）
+    (r'(?<![:/\w])[A-Za-z]:[\\/][^\s"\'|<>]{3,}', '绝对路径'),
     (r'(password|passwd|pwd|secret|token|api[_-]?key)\s*[:=]\s*\S+', '凭据'),
     (r'user(name)?\s*[:=]\s*[^\s"\'|<>]+', '账号'),
     (r'(session|会话)[-_ ]?(\d{6,}|[a-f0-9]{8,})', '会话号'),
@@ -198,6 +199,10 @@ def run(targets: list[Path] = None, check_all: bool = False, repo: Path = None) 
     for t in targets:
         if not t.exists():
             hints.append(f"[提示] 文件不存在（跳过）: {t.name}")
+            continue
+        # 索引.md 是表格文件（无 frontmatter），跳过 frontmatter 校验，只查链接
+        if t.name == '索引.md':
+            check_links(t, errors)
             continue
         check_frontmatter(t, errors)
         check_index_consistency(t, errors)
