@@ -1,4 +1,4 @@
-﻿---
+---
 name: memory-gen
 description: "任务完成后的经验沉淀生成器。从刚完成的任务（配置、排障、开发、调试等）中提取可复用的、非特定环境的、能赋能其他 agent 的知识，按 <知识概要-年月日.md> 命名沉淀到 .dsh-memory/knowledge/experiences/sparse/ 目录（v2 知识库真实位置）。当用户提到'沉淀经验、抽萃知识、总结可复用经验、生成经验文档、memory-gen、经验入册'时使用。"
 scene: null
@@ -24,6 +24,15 @@ user-invocable: true
 **一句话判定：** 换一个 agent、换一台设备、下次遇到同类问题时，
 这条知识是否依然有用？有用 → 沉淀；没用 → 丢弃。
 
+## 去毒四问（M5 强制门禁，沉淀前必过）
+
+1. **通用**：换一个 agent 做同类任务，这条知识还成立吗？
+2. **普适**：换一台设备 / 一个环境，它还成立吗？（无 IP/账号/密码/临时路径残留）
+3. **非一次性**：它是可复用的规律/流程/判断标准，还是一次性操作记录？
+4. **可验证**：下一个人按它操作，能复现出结论吗？（有"怎么做"和"为什么"）
+
+任一不通过 → 丢弃，不沉淀。全部通过 → 继续。
+
 ## 触发时机
 
 - 任务有明确结论（排障有根因、配置已生效、功能已完成）
@@ -32,25 +41,30 @@ user-invocable: true
 ## 执行流程
 
 1. **回放任务**：回顾这次任务做了什么、关键判断点有哪些、哪个环节卡壳/走弯路。
-2. **筛选知识**：按上面原则，逐条判断哪条值得沉淀（宁缺毋滥）。
-3. **提炼内容**：写成"下一个人看到就能照做"的表述——
+2. **去毒自审**：对候选知识逐条过"去毒四问"（见上），过滤环境残留。
+3. **筛选知识**：按上面原则，逐条判断哪条值得沉淀（宁缺毋滥）。
+4. **提炼内容**：写成"下一个人看到就能照做"的表述——
    包含**怎么判断（场景）、怎么做（步骤）、为什么（原因）**，缺一不可。
-4. **写入文件**：输出到 **`<workspace_root>/.dsh-memory/knowledge/experiences/sparse/`**（v2 知识库真实位置）
+5. **选择落点**（M5 四类分区）：
+   - 产品架构/协议/领域事实 → `knowledge/product/`
+   - 工具/技能使用经验与坑 → `knowledge/skills/`
+   - 具体问题场景（现象/触发链路/解法/复盘）→ `knowledge/scenes/<scene>/`（带 `problem_id` 去重）
+   - 通用方法论/流程/判断标准 → `knowledge/experiences/sparse/`（默认）
+6. **写入文件**：输出到 `<workspace_root>/.dsh-memory/knowledge/<类别>/` 对应目录
    （**路径锚定**：`<workspace_root>` = 当前 git 仓库根，由 LLM 在运行时通过 `git rev-parse --show-toplevel` 解析；
    `.dsh-memory/` 是 git submodule 真身，存放在仓库根下，禁止在其他位置创建幻影路径），
    命名 `知识概要-年月日.md`（见下文命名规范）。
-5. **更新索引**：维护索引文件 `<workspace_root>/.dsh-memory/knowledge/experiences/sparse/索引.md`，
-   格式见下；不存在则先创建。
-6. **自校验锚定**：写入后执行 `git -C "$(git rev-parse --show-toplevel)" status --short`，
-   应能看到 `.dsh-memory/knowledge/experiences/sparse/` 下的新文件；
-   若路径不以 `<workspace_root>/.dsh-memory/knowledge/experiences/sparse/` 开头，说明锚定错误，需改正后再继续。
+7. **更新索引**：维护索引文件（对应分区 `索引.md`），格式见下；不存在则先创建。
+8. **自校验锚定**：写入后执行 `git -C "$(git rev-parse --show-toplevel)/.dsh-memory" status --short`，
+   应能看到 `knowledge/` 下的新文件；若路径不以 `<workspace_root>/.dsh-memory/knowledge/` 开头，说明锚定错误，需改正后再继续。
+9. **提交门禁**：`python "$(git rev-parse --show-toplevel)/.dsh/tools/link_check.py"` 必须 PASS（前端校验），再交 memory-push 推送。
 
-> **写入方式**：优先用 MCP `mcp__memory__memory_save`（自动合并去重 + 自动更新索引）；不可用时降级用 `read/write` 工具直接操作 `.dsh-memory/knowledge/experiences/{refined,sparse,expired}/*.md`。
+> **写入方式**：优先用 MCP `mcp__memory__memory_save`（自动合并去重 + 自动更新索引）；不可用时降级用 `read/write` 工具直接操作 `.dsh-memory/knowledge/{product,skills,scenes,experiences}/*.md`。
 
 ## 命名规范
 
 ```
-<workspace_root>/.dsh-memory/knowledge/experiences/sparse/知识概要-年月日.md
+<workspace_root>/.dsh-memory/knowledge/<类别>/知识概要-年月日.md
 ```
 
 | 部分 | 规则 | 示例 |
@@ -61,25 +75,28 @@ user-invocable: true
 完整示例：`<workspace_root>/.dsh-memory/knowledge/experiences/sparse/交换机接口配置避坑指南-20260820.md`
 
 > **路径锚定（必须）**：`<workspace_root>` = 当前 git 仓库根（运行 `git rev-parse --show-toplevel` 得到）。
-> 所有经验文档**必须**输出到 `<workspace_root>/.dsh-memory/knowledge/experiences/sparse/`（v2 知识库 sparse 层）。
+> 所有经验文档**必须**输出到 `.dsh-memory/knowledge/` 下（v2 知识库真实位置）。
 > `.dsh-memory/` 真身位于该仓库根下（作为 git submodule），禁止在其他位置创建幻影路径。
 
 > **重名规避**：同一天、同类知识概要若已存在同名文件，在概要后追加序号
 > （如 `接口配置避坑指南-2-20260820.md`），禁止静默覆盖已有沉淀。
 
+> **场景知识去重（M5）**：场景知识 frontmatter 带 `problem_id`（问题指纹 `<domain>-<问题规范化摘要>`）。
+> 已存在相同 `problem_id` 的文档时，**追加到已有文档**（复盘更新），不新建文件。
+
 ## 索引文件
 
-`索引.md` 维护在 `<workspace_root>/.dsh-memory/knowledge/experiences/sparse/` 下，追加一行格式：
+`索引.md` 维护在对应知识分区目录下，追加一行格式：
 
 ```markdown
 - 2026-08-20 [交换机接口配置避坑指南](交换机接口配置避坑指南-20260820.md) — 一句话概述
 ```
 
-> **总索引边界**：v2 知识库按 `refined > sparse > expired` 三级分层各自维护 `索引.md`；无单一"总索引"概念。
-> 检索入口见 `.dsh-memory/README.md` 或通过 `mcp__memory__memory_search` 工具。
-> 新经验默认落 sparse 层；命中 3 次复用成功后由 `tier_manager.py` 自动晋升到 refined 层。
+> **总索引边界**：v2 知识库按 `refined > sparse > expired` 三级分层各自维护 `索引.md`；product/skills/scenes 分区各有目录级索引。
+> 检索入口见 `.dsh-memory/README.md` 或 `search.py --scene <场景>`。
+> 新经验默认落 sparse 层；命中 3 次复用成功且权重 ≥ 0.7 后由 `tier_manager.py` 自动晋升到 refined 层。
 
-## 文档模板
+## 文档模板（M5：含权重字段）
 
 ```markdown
 ---
@@ -91,6 +108,13 @@ occurrence: 1
 status: active
 created_at: YYYY-MM-DD
 updated_at: YYYY-MM-DD
+summary: 一句话概述
+weight: 0.5
+decay_rate: null
+weight_updated_at: YYYY-MM-DDTHH:MM:SSZ
+knowledge_type: experience
+scene: null
+problem_id: null
 ---
 
 # <知识概要>
@@ -115,14 +139,17 @@ updated_at: YYYY-MM-DD
 关联的可复用小工具、已有文档、或同主题经验。
 ```
 
-frontmatter 必填字段：`id` / `tags` / `severity` / `category` / `occurrence` / `status` / `created_at` / `updated_at`；正文必须含 `## 适用场景` + `## 核心流程 / 知识点`（与 `## 现象` + `## 解决方案` 等价表述）。
+frontmatter 必填字段：`id` / `tags` / `severity` / `category` / `occurrence` / `status` / `created_at` / `updated_at` / `summary` / `weight` / `weight_updated_at` / `knowledge_type`；正文必须含 `## 适用场景` + `## 核心流程 / 知识点`（与 `## 现象` + `## 解决方案` 等价表述）。
 
 ## 质量标准
 
-写完后自检：
+写完后自检（含去毒四问清单）：
 
+- [ ] **去毒四问**：通用？普适（无 IP/账号/密码/绝对路径/会话号）？非一次性？可验证？
 - [ ] 换他人/换环境依然适用（无环境残留）
 - [ ] 有"怎么做"和"为什么"，不是结论堆砌
 - [ ] 步骤可操作，不是抽象口号
 - [ ] 长度适中：一条经验 20~120 行，聚焦单一主题
-- [ ] frontmatter 齐全
+- [ ] frontmatter 齐全（含 weight/weight_updated_at/knowledge_type）
+- [ ] 对应分区 `索引.md` 已更新
+- [ ] `link_check.py` PASS
