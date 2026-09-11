@@ -1,0 +1,37 @@
+#!/bin/sh
+# pre-commit —— 蜂巢大脑主仓提交门禁（联动 submodule 知识门禁）
+#
+# 作用：
+#  1. 主仓提交若含 .dsh-memory（gitlink）变更，校验 submodule 内无未提交的知识文件
+#     （防止"知识没进 submodule 提交、只更新了 gitlink"的错误形态）；
+#  2. 校验 submodule 最新提交是否已推送远端（gitlink 必须指向已推送的提交）。
+# 安装：git config core.hooksPath hooks
+#
+# 注：submodule 内知识提交的门禁由 .dsh-memory/hooks/pre-commit 负责（主门禁），
+#     本钩子是第二道防线。
+set -e
+
+# 暂存区是否含 .dsh-memory 变更
+if ! git diff --cached --name-only | grep -q '^\.dsh-memory$'; then
+    exit 0
+fi
+
+SUB="$(git rev-parse --show-toplevel)/.dsh-memory"
+
+echo "pre-commit: 检测到 .dsh-memory gitlink 变更，校验 submodule 状态..."
+
+# 1. submodule 内是否有未提交/未暂存的知识文件
+if ! git -C "$SUB" diff --quiet && ! git -C "$SUB" diff --cached --quiet; then
+    echo "pre-commit: ❌ submodule 内存在未提交的知识文件 —— 请先在 submodule 内提交推送（git -C .dsh-memory commit/push）" >&2
+    exit 1
+fi
+
+# 2. submodule 本地是否领先远端（gitlink 必须指向已推送提交）
+AHEAD=$(git -C "$SUB" rev-list --count origin/master..master 2>/dev/null || echo "0")
+if [ "$AHEAD" != "0" ]; then
+    echo "pre-commit: ❌ submodule 有 $AHEAD 个未推送提交 —— 请先 git -C .dsh-memory push origin master" >&2
+    exit 1
+fi
+
+echo "pre-commit: ✅ submodule 状态合规"
+exit 0
