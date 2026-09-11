@@ -1,4 +1,4 @@
-﻿---
+---
 name: analysis-only-workflow
 description: 无 bug 单的简化分析闭环工作流。适用于用户拿到一段代码/日志/原始问题描述，需要做 取证→对抗审查→修改方案→编码→代码审查 的最短闭环，但**没有 JIRA bug 单**、不需要 PR、不需要上机验证的场景。触发词：分析一下、代码审查、方案评审、闭环分析、无bug单分析、轻量分析、无工单分析、analysis-only-workflow。当用户提供 BUG 单号（如 NEWNF-XXXXX）时，应使用 bug-fix-workflow 而非本 skill。
 scene: null
