@@ -2,13 +2,15 @@
 # pre-commit —— 蜂巢大脑主仓提交门禁（联动 submodule 知识门禁）
 #
 # 作用：
-#  1. 主仓提交若含 .dsh-memory（gitlink）变更，校验 submodule 内无未提交的知识文件
+#  1. 主仓提交若含 .dsh-memory（gitlink）变更，校验 submodule 内无未提交/未跟踪的知识文件
 #     （防止"知识没进 submodule 提交、只更新了 gitlink"的错误形态）；
 #  2. 校验 submodule 最新提交是否已推送远端（gitlink 必须指向已推送的提交）。
 # 安装：git config core.hooksPath hooks
 #
 # 注：submodule 内知识提交的门禁由 .dsh-memory/hooks/pre-commit 负责（主门禁），
 #     本钩子是第二道防线。
+# 注意：本文件必须保持无 BOM（UTF-8 without BOM），否则 #!/bin/sh shebang 失效、
+#      git 报 "cannot spawn hooks/pre-commit"。编辑用 write 工具（无 BOM）。
 set -e
 
 # 暂存区是否含 .dsh-memory 变更
@@ -20,9 +22,14 @@ SUB="$(git rev-parse --show-toplevel)/.dsh-memory"
 
 echo "pre-commit: 检测到 .dsh-memory gitlink 变更，校验 submodule 状态..."
 
-# 1. submodule 内是否有未提交/未暂存的知识文件
-if ! git -C "$SUB" diff --quiet && ! git -C "$SUB" diff --cached --quiet; then
-    echo "pre-commit: ❌ submodule 内存在未提交的知识文件 —— 请先在 submodule 内提交推送（git -C .dsh-memory commit/push）" >&2
+# 1. submodule 内是否有未提交/未跟踪的知识文件（status --porcelain 含 untracked）
+#    （git diff 只看已跟踪文件的修改，会漏检未跟踪文件——分支A测试暴露的缺陷）
+# 注意：git hook 运行时设置 GIT_INDEX_FILE 等环境变量指向主仓临时 index，
+#      子进程 git 命令会继承 —— 必须 unset，否则 submodule status 读到主仓 index
+#      （表现为大量 staged D 文件假象）。
+PORCELAIN="$(env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE git -C "$SUB" status --porcelain 2>&1)"
+if [ -n "$PORCELAIN" ]; then
+    echo "pre-commit: ❌ submodule 内存在未提交/未跟踪文件 —— 请先在 submodule 内提交（git -C .dsh-memory add/commit）" >&2
     exit 1
 fi
 

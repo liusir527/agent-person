@@ -85,6 +85,30 @@ if (Test-Path $dirsJson) {
   Write-Host "  NOTE: restart 'dsh web' once so nf-hooks loads the new dirs.json."
 }
 
+# --- 0b. Activate pre-commit knowledge gate hooks (idempotent) ------------
+# 蜂巢大脑去毒门禁：提交知识时自动跑 link_check，FAIL 拦截提交。
+# 主仓 + submodule 各配 core.hooksPath 指向仓库内 hooks/ 目录（可 git 管理）。
+Write-Host ""
+Write-Host "[hooks] pre-commit knowledge gate:"
+if (Test-Path (Join-Path $repoRoot 'hooks/pre-commit')) {
+  & git config core.hooksPath hooks
+  Write-Host "  * main repo: core.hooksPath -> hooks"
+} else {
+  Write-Host "  * main repo hooks/pre-commit missing, skip"
+}
+$memSub = Join-Path $repoRoot '.dsh-memory'
+if ((Test-Path (Join-Path $memSub 'hooks/pre-commit')) -and (Test-Path (Join-Path $memSub '.git'))) {
+  Push-Location $memSub
+  try {
+    & git config core.hooksPath hooks
+    Write-Host "  * submodule (.dsh-memory): core.hooksPath -> hooks"
+  } finally {
+    Pop-Location
+  }
+} else {
+  Write-Host "  * submodule hooks/pre-commit or .git missing, skip (clone --recursive 后再跑本脚本)"
+}
+
 # --- 1. Verify required tools -------------------------------------------
 function Test-Cmd {
   param($Name, $Hint)
