@@ -1,0 +1,14 @@
+# 场景定义：debug（调试）
+
+# 场景标识（与 knowledge/scenes/<name>/ 目录、skill frontmatter 的 scene 字段一致）
+name: debug
+
+# 场景说明
+description: 调试场景 —— BUG 定位、现场取证、GDB/SSH 设备调试
+
+# 本场景激活的知识检索：search.py --scene debug
+# - 纳入 knowledge/scenes/debug/ 目录
+# - experiences 中 scene=debug 或 scene 为 null（通用）的经验
+
+# 本场景典型 skill（软约束，agent 按需选用）：
+#   bug-fix-workflow、gdb-tools、ssh-tools、nf-config-procedures ...

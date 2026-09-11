@@ -1,0 +1,29 @@
+# 工作区 manifest —— 统一入口（蜂巢大脑 M2）
+
+# 本文件是 agent 启动时读取的第一份配置：
+# 识别"这是什么工作区、什么场景、知识大脑在哪"。
+# 只承载身份与引用；能力清单/权重参数的唯一事实源是 .dsh-memory/hive.yaml（勿在此复制）。
+
+role: developer
+
+# 当前激活场景（缺省 develop）：
+#   develop —— 开发场景
+#   debug   —— 调试场景
+# 场景定义见 scenes/<scene>.yaml；切换场景 = 修改此处 + 按场景检索知识（search.py --scene）
+scene: develop
+
+# 中央大脑（知识库）引用：git submodule
+hive_ref:
+  path: .dsh-memory
+  # 知识根：四类分区
+  #   product/      产品知识（长期稳定）
+  #   skills/       SKILL 工具使用信息（中速）
+  #   scenes/       场景信息（快速；<scene>/ 子目录）
+  #   experiences/  Agent 采集经验（三层分级 + 连续权重）
+  manifest: .dsh-memory/hive.yaml
+
+# 新 agent 加入共享（完整引导）：
+#   1. git clone --recursive <主仓URL>
+#   2. cd <主仓> && git submodule update --remote --merge   # 拉最新大脑
+#   3. 读本文件 + .dsh-memory/hive.yaml 识别场景与能力
+#   4. 开始任务；沉淀知识走 memory-gen → memory-push（去毒门禁）

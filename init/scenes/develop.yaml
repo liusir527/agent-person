@@ -1,0 +1,14 @@
+# 场景定义：develop（开发）
+
+# 场景标识（与 knowledge/scenes/<name>/ 目录、skill frontmatter 的 scene 字段一致）
+name: develop
+
+# 场景说明
+description: 开发场景 —— 需求开发、功能实现、代码编写
+
+# 本场景激活的知识检索：search.py --scene develop
+# - 纳入 knowledge/scenes/develop/ 目录
+# - experiences 中 scene=develop 或 scene 为 null（通用）的经验
+
+# 本场景典型 skill（软约束，agent 按需选用）：
+#   requirement-dev-workflow、mr-merge、deploy-build、certificate-apply ...
