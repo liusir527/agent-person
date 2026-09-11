@@ -29,6 +29,10 @@ git submodule update --remote --merge
 
 # 4. 检索知识（按场景）
 python .dsh-memory/scripts/search.py "关键词" --scene debug
+
+# 5. 激活去毒门禁钩子（一次性；提交知识时自动跑 link_check，FAIL 拦截提交）
+git config core.hooksPath hooks
+git -C .dsh-memory config core.hooksPath hooks
 ```
 
 ## 场景切换
