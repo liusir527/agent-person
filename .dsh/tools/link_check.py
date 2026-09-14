@@ -195,7 +195,9 @@ def run(targets: list[Path] = None, check_all: bool = False, repo: Path = None) 
 
     if targets is None:
         if check_all:
-            targets = [p for p in knowledge_dir.rglob('*.md') if p.name != '索引.md']
+            # 导航/说明文件（AGENT.md / README.md / 索引.md）不是知识条目，不校验 frontmatter/索引
+            targets = [p for p in knowledge_dir.rglob('*.md')
+                       if p.name not in ('索引.md', 'AGENT.md', 'README.md')]
             print(f"[link_check] 全量扫描 {len(targets)} 个知识文件（存量提示模式）")
         else:
             repo = repo or REPO_ROOT
@@ -206,6 +208,10 @@ def run(targets: list[Path] = None, check_all: bool = False, repo: Path = None) 
     for t in targets:
         if not t.exists():
             hints.append(f"[提示] 文件不存在（跳过）: {t.name}")
+            continue
+        # 导航/说明文件（AGENT.md / README.md）豁免：不是知识条目，不需要 frontmatter/索引
+        if t.name in ('AGENT.md', 'README.md'):
+            hints.append(f"[豁免] {t.name} 为导航/说明文件，跳过知识校验")
             continue
         # 索引.md 是表格文件（无 frontmatter），跳过 frontmatter 校验，只查链接
         if t.name == '索引.md':
