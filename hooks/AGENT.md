@@ -7,12 +7,16 @@
 
 | 功能 | 实现位置 | 说明 |
 |------|----------|------|
-| 访问门控（restricted 模式） | [../../packages/nf-hooks/src/index.ts](../../packages/nf-hooks/src/index.ts) | 强制文件边界：拦截文件工具（read/write/edit/glob/grep）的 file_path/path，以及 shell 工具（pwsh/bash/sh/cmd/powershell）命令中引用的盘符路径，仅允许放行目录 |
+| 访问门控（restricted 模式） | [../../packages/nf-hooks/src/index.ts](../../packages/nf-hooks/src/index.ts) | 强制文件边界：拦截文件工具（read/write/edit/glob/grep）的 file_path/path，以及 shell 工具（pwsh/bash/sh/cmd/powershell）命令中引用的盘符路径，仅允许放行目录。**workdir 每次从 session header 动态解析**（非 process.cwd()，避免 dsh web 从 npm 全局目录启动导致 cwd 错位）；`.dsh/` 配置区始终放行（自我编辑：登记新目录 / 调整门禁不被自己的门控拦截） |
 
 ## 数据配置
 
 - 放行目录清单：[../rules/dirs.json](../rules/dirs.json)
 - 工作区模式：`restricted`（由 `dirs.json` 中的 `mode` 字段控制）
+- **workdir 判定**：以会话的 `session.header.cwd` 为准（即启动会话时的工作目录），
+  不受 `dsh web` 进程自身 cwd 影响；无会话上下文时回退 `process.cwd()`。
+- **登记即生效**：`dirs.json` 每次检查动态重读，登记新目录无需重启 `dsh web`；
+  仅修改 nf-hooks 自身代码（`src/index.ts` → `pnpm exec tsc`）后才需重启加载新 lib。
 
 ## 使用原则
 

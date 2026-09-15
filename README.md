@@ -81,9 +81,10 @@ pwsh -File scripts/bootstrap-nf-plugins.ps1
 8. 写入占位 `mcp_memory.py` stub 到 `~/.dsh-memory/scripts/`
    （**仅在缺失时**；P4 真实实现落地后由人工替换，bootstrap 不会覆盖）。
 
-> ⚠️ 步骤3 写 `dirs.json` 之后，**必须重启一次 `dsh web`**，nf-hooks 才会加载新白名单，
-> bootstrap 后续阶段才能写到 `~/.dsh/...`。首次 clone 用户跑完一次 bootstrap 后，
-> 关闭再打开 web 即可。
+> ⚠️ 步骤3 写 `dirs.json` 之后：**登记的目录即时生效**（nf-hooks 每次检查动态重读 dirs.json，
+> 无需重启）。但若修改的是 nf-hooks 插件**自身代码**（`packages/nf-hooks/src/index.ts`，
+> 需先 `pnpm exec tsc` 重编 lib），才需要重启一次 `dsh web` 加载新 lib。
+> 首次 clone 用户跑完一次 bootstrap 后，关闭再打开 web 即可。
 
 完成后启动 GUI：
 

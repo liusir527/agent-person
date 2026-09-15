@@ -119,22 +119,33 @@ function skillFrontmatterErrors(workspaceRoot: string, exec: { arguments: Record
 }
 
 export function apply(ctx: Context) {
-  // 工作区根 = 启动进程的 cwd（目录迁移后即仓库根，如 E:\agent_assets），统一规范化路径分隔符
-  const workspaceRoot = path.resolve(process.cwd())
-  const dirsJsonPath = path.resolve(workspaceRoot, '.dsh', 'rules', 'dirs.json')
+  // 工作区根不再一次性取 process.cwd() —— dsh web 进程常从 npm 全局目录启动，
+  // cwd 与 session workdir 错位，导致 dirs.json 定位失败、全部路径被拒（历史 bug）。
+  // 每次检查时从 exec 的 session header 动态取真正的 workdir，无 agent 时回退 process.cwd()。
+  function resolveWorkspace(exec: ToolExecution): string {
+    const cwd = exec.agent?.session?.header?.cwd
+    if (cwd && typeof cwd === 'string' && cwd.length > 0) return path.resolve(cwd)
+    return path.resolve(process.cwd())
+  }
+  // dirs.json 相对 session workdir 定位（同一 workdir 下才可能登记到本项目配置）
+  function resolveDirsJson(workspaceRoot: string): string {
+    return path.resolve(workspaceRoot, '.dsh', 'rules', 'dirs.json')
+  }
 
   // 系统必需放行目录：DSH 框架/依赖（node_modules）与系统临时目录，
-  // 避免误伤正常使用框架文档/临时文件的合法操作
+  // 避免误伤正常使用框架文档/临时文件的合法操作。
+  // 只放行 os.tmpdir() 本身（Temp，dsh-spill-* 等也在此），不放行其父目录 AppData\Local 整树
+  // （P1-2：此前放行 AppData\Local 导致所有用户级应用数据可写，过宽）。
   const systemAllowed = [
-    path.resolve(os.tmpdir()),          // C:\Users\<user>\AppData\Local\Temp
-    path.resolve(os.tmpdir(), '..'),    // AppData\Local（dsh-spill 等）
+    path.resolve(os.tmpdir()),          // C:\Users\<user>\AppData\Local\Temp（含 dsh-spill-*）
   ]
 
   // 动态读取 dirs.json 配置（每次检查时重读，避免缓存失效）
   // restricted 模式：放行范围 = workspace 根内全部内容 + dirs.json 登记的外部目录
   // open 模式：全部放行
   // 返回 null 表示 open（全放行），否则返回外部追加目录列表
-  function loadExternalDirs(): string[] | null {
+  function loadExternalDirs(workspaceRoot: string): string[] | null {
+    const dirsJsonPath = resolveDirsJson(workspaceRoot)
     const dirs: string[] = []
     try {
       if (fs.existsSync(dirsJsonPath)) {
@@ -155,17 +166,23 @@ export function apply(ctx: Context) {
     return dirs
   }
 
-  // 判断路径是否在放行集内
-  function isPathAllowed(filePath: string): boolean {
+  // 判断路径是否在放行集内（workspace 每次按 exec 动态解析）
+  function isPathAllowed(exec: ToolExecution, filePath: string): boolean {
+    const workspaceRoot = resolveWorkspace(exec)
     const resolved = path.resolve(workspaceRoot, filePath)
     // 工作区根目录本身及其下所有内容始终放行（restricted 的边界 = 工作区根）
     if (resolved === workspaceRoot || resolved.startsWith(workspaceRoot + path.sep)) return true
+
+    // 自我编辑放行：.dsh/ 配置区（dirs.json / rules / skills / patch 等）是插件自身配置，
+    // 修改它们（登记新目录、调整门禁）不应被自己的门控拦截
+    const dshRoot = path.resolve(workspaceRoot, '.dsh')
+    if (resolved === dshRoot || resolved.startsWith(dshRoot + path.sep)) return true
 
     // 系统必需目录放行（Temp / node_modules 依赖）
     if (systemAllowed.some((allowed) => resolved.startsWith(allowed + path.sep) || resolved === allowed)) return true
     if (resolved.includes(`${path.sep}node_modules${path.sep}`)) return true
 
-    const externalDirs = loadExternalDirs()
+    const externalDirs = loadExternalDirs(workspaceRoot)
     // null 表示 open 模式，全放行
     if (externalDirs === null) return true
 
@@ -211,7 +228,7 @@ export function apply(ctx: Context) {
       if (!filePath || typeof filePath !== 'string') {
         return next()
       }
-      if (!isPathAllowed(filePath)) {
+      if (!isPathAllowed(exec, filePath)) {
         return {
           kind: 'deny',
           reason: `路径 "${filePath}" 不在可访问范围内。`,
@@ -219,7 +236,7 @@ export function apply(ctx: Context) {
       }
       // SKILL.md 写入格式门禁（用户可选软/硬：硬校验 —— 命中即拒，防 skill 被 DSH 静默忽略）
       if (toolName === 'write' || toolName === 'edit') {
-        const skillHit = skillFrontmatterErrors(workspaceRoot, { arguments: args })
+        const skillHit = skillFrontmatterErrors(resolveWorkspace(exec), { arguments: args })
         if (skillHit !== null && skillHit.errors.length > 0) {
           console.log(`[nf-hooks] deny skill 写入（${skillHit.skillDir}/SKILL.md）：${skillHit.errors.length} 个格式问题`)
           return {
@@ -242,7 +259,7 @@ export function apply(ctx: Context) {
       }
       const paths = extractWindowsPaths(command)
       for (const p of paths) {
-        if (!isPathAllowed(p)) {
+        if (!isPathAllowed(exec, p)) {
           return {
             kind: 'deny',
             reason: `命令引用了未放行路径 "${p}"，不在可访问范围内。如需读取/修改该路径，请先登记到 .dsh/rules/dirs.json。`,
@@ -255,5 +272,5 @@ export function apply(ctx: Context) {
     return next()
   })
 
-  console.log(`[nf-hooks] 已注册访问门控(restricted 模式, cwd=${process.cwd()}, dirsJson=${dirsJsonPath})`)
+  console.log(`[nf-hooks] 已注册访问门控(restricted 模式, 动态 workdir 解析, fallback cwd=${process.cwd()})`)
 }

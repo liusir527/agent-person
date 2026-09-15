@@ -12,14 +12,54 @@
       "addedBy": "scripts/bootstrap-nf-plugins.ps1"
     },
     {
+      "path": ".\\.dsh-memory",
+      "reason": "本仓库根下的 .dsh-memory submodule（与 C:\\Users\\DELL\\.dsh-memory 是不同实例：submodule 跟 git 仓库走，写入经验文档 / 索引 / 检索时用此路径；用 read/write 工具时必须放行）。",
+      "addedBy": "session: memory-gen (DSH配置vision字段名经验沉淀)"
+    },
+    {
       "path": "F:\\software\\NF605\\npp\\606\\npp",
       "reason": "npp源码基准目录",
+      "addedBy": ""
+    },
+    {
+      "path": "F:\\software\\NF605\\npp\\606\\npp.worktrees",
+      "reason": "npp源码工作树目录",
       "addedBy": ""
     },
     {
       "path": ".\\runtime",
       "reason": "运行时临时目录（analysis-only-workflow / vpp-api-sync / ssh-tools / gdb-tools 等 skill 的会话级产物）。不入库，按 SESS 子目录隔离，任务结束保留即可。",
       "addedBy": "scripts/bootstrap-nf-plugins.ps1 (analysis-only-workflow 落地时追加)"
+    },
+    {
+      "path": "E:\\agent_assets",
+      "reason": "用户 workspace 模式启动失败的调查现场：修复 duplicate loader entry id: nf-system-prompt。",
+      "addedBy": "session-troubleshooting"
+    },
+    {
+      "path": "E:\\002. 工作记录\\SDWAN规则",
+      "reason": "SDWAN需求的设计文档",
+      "addedBy": ""
+    },
+    {
+      "path": "C:\\Python314\\python.exe",
+      "reason": "Python工具",
+      "addedBy": ""
+    },
+    {
+      "path": "C:\\Users\\DELL\\Documents\\WindowsPowerShell",
+      "reason": "用户 PowerShell 配置文件目录（Microsoft.PowerShell_profile.ps1），处理 profile 报错时需读写。",
+      "addedBy": "session: fix-powershell-profile"
+    },
+    {
+      "path": "E:\\002. 工作记录\\天翼云容器项目",
+      "reason": "天翼云NF容器性能优化方案文档及过程资料（用户要求总结为投稿Word文档）。",
+      "addedBy": "session: 天翼云容器性能优化总结"
+    },
+    {
+      "path": "E:\\数字永生\\agent-person",
+      "reason": "用户当前 session workdir（含 .dsh/ 项目配置、AGENTS.md、agents/ 子 agent 定义、runtime/ 过程文件落地区）。此前 dirs.json 仅有 .\\.dsh-memory 与 .\\runtime 相对路径，被解析到 DSH 进程级基准目录而非本仓库根，导致整仓库被沙箱阻断。",
+      "addedBy": "session: dirs.json-sandbox-block-troubleshoot"
     }
   ]
 }
