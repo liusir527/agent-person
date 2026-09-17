@@ -48,5 +48,11 @@ name: my-rule
 
 | 文件 | frontmatter | 说明 |
 |---|---|---|
+| `knowledge-sedimentation.md` | `order: 40` | 知识沉淀去毒门禁（去毒四问 / 四类分区 / frontmatter 规范 / link_check 提交门禁） |
+| `review-deliverable-gate.md` | `order: 45` | 文档审阅交付物门禁（引文逐字命中 / 否定性断言前做渲染态核对） |
 | `process-files.md` | 无 | 过程文件归属规则**完整版**（提示词注入的是插件内的摘要，本文件不重复注入） |
 | `dirs.json` | — | 沙箱可访问目录登记（非提示词规则，由 `nf-hooks` 读取） |
+
+> 排查提示：缺 `order` / `order` 非数值 / 正文为空 / `enabled: false` 的规则文件会被**静默跳过**，
+> 只在启动日志里打一行 `[nf-system-prompt] 跳过 …`。新增规则后请确认日志出现
+> `已注入规则文件 <文件名> → section … (order …)`。

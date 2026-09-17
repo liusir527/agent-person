@@ -8,6 +8,12 @@ scene: debug
 
 将本 skill 作为串接式调试工作流的总调度器。保持当前上下文精简：按阶段加载对应 reference，必要时调用更窄的 skill 或工具，并在进入下一阶段前记录关键判断。
 
+> **产出/评审文档类交付物时**（设计说明书、问题清单、评审报告、结论文档，以及任何要引用原文的文本）：
+> 遵守 `.dsh/rules/review-deliverable-gate.md`——引号内引文必须逐字命中原文；断言"文档里没有 X"之前必须做渲染态核对。
+> 具体姿势与实测战例见 `.dsh-memory/knowledge/experiences/sparse/审阅类文本引文核验-20260916.md`
+> 与 `.dsh-memory/knowledge/experiences/sparse/成果交付物渲染态核对-20260916.md`；
+> 若需程序化给 `.docx` 加批注，另见 `.dsh-memory/knowledge/skills/Word文档程序化批注避坑-20260916.md`。
+
 
 
 ## 环境前置检查（开工前必跑，缺一不可）

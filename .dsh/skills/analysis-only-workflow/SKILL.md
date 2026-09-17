@@ -9,6 +9,12 @@ scene: null
 将本 skill 作为「无 bug 单」场景的端到端串接器。**与 bug-fix-workflow 完全解耦**：
 JIRA / PR / 上机验证 / 工单关闭 全流程不触发；仅保留分析深度、对抗审查、方案用户确认、代码审查这四道硬门禁。
 
+> **产出/评审文档类交付物时**（设计文档评审、问题清单、方案评审报告，以及任何要引用原文的文本）：
+> 遵守 `.dsh/rules/review-deliverable-gate.md`——引号内引文必须逐字命中原文；断言"文档里没有 X"之前必须做渲染态核对。
+> 具体姿势与实测战例见 `.dsh-memory/knowledge/experiences/sparse/审阅类文本引文核验-20260916.md`
+> 与 `.dsh-memory/knowledge/experiences/sparse/成果交付物渲染态核对-20260916.md`；
+> 若需程序化给 `.docx` 加批注，另见 `.dsh-memory/knowledge/skills/Word文档程序化批注避坑-20260916.md`。
+
 ## 何时使用本 skill
 
 - 用户给的是一段代码、日志、崩溃描述、设计问题、临时 issue，**没有 JIRA 单号**。

@@ -9,6 +9,14 @@ user-invocable: false
 
 将本 skill 作为**主 agent 在每次成功写入文件之后必须串接的审查调度器**。reviewer 是一个**有状态的、可被 send_message 续接的 subagent**，不是 fresh-agent。
 
+> **文档类审阅交付物额外门禁**（问题清单 / 评审报告 / 评审版文档）：遵守
+> `.dsh/rules/review-deliverable-gate.md` 的两条禁令——引文逐字命中、否定性断言前做渲染态核对。
+> 该类标的的 reviewer 必须把「引文是否逐字属实」与「结论是否越界」列入问题清单，
+> 不能只审格式。可复用姿势与实测战例：
+> - `.dsh-memory/knowledge/experiences/sparse/审阅类文本引文核验-20260916.md`
+> - `.dsh-memory/knowledge/experiences/sparse/成果交付物渲染态核对-20260916.md`
+> - `.dsh-memory/knowledge/skills/Word文档程序化批注避坑-20260916.md`（标的为 .docx 时）
+
 ## 核心原则
 
 1. **审查对象**：所有通过 write/edit 工具成功落盘的文件（`.md` / `.py` / `.sh` / `.json` / `.yaml` / 任何文本文件）。
@@ -160,6 +168,9 @@ write_review_round(round=1):
 - [ ] frontmatter 必填项是否齐全？
 - [ ] 代码块是否有 language 标识？
 - [ ] Python 是否有明显语法错误？
+- [ ] **（审阅类交付物）** 引号内的"原文如此"是否都能在原文逐字命中？（跑机器 `count()` 比对，不靠人眼）
+- [ ] **（审阅类交付物）** 是否写了"文档里没有 X"这类否定断言？写了就必须已做过渲染态核对
+- [ ] **（.docx 标的）** 正文是否零改动（逐段差异 = 0）？批注标记是否三元素配对？
 
 自检发现问题：直接修复后再派发 reviewer，避免浪费 review 轮次。
 
